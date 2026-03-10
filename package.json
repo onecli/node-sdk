@@ -1,0 +1,55 @@
+{
+  "name": "@onecli/sdk",
+  "version": "0.1.0",
+  "description": "Official Node.js SDK for OneCLI. Connect AI agents to external services via the OneCLI proxy.",
+  "main": "./lib/index.js",
+  "module": "./lib/index.mjs",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./lib/index.d.mts",
+        "default": "./lib/index.mjs"
+      },
+      "require": {
+        "types": "./lib/index.d.ts",
+        "default": "./lib/index.js"
+      }
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "onecli",
+    "sdk",
+    "proxy",
+    "ai-agents",
+    "cli",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onecli/onecli-sdk.git"
+  },
+  "author": "OneCLI <hello@onecli.sh>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/onecli/onecli-sdk/issues"
+  },
+  "homepage": "https://onecli.sh",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.1",
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4"
+  }
+}
