@@ -11,8 +11,8 @@ export interface ContainerConfig {
 
 export interface ApplyContainerConfigOptions {
   /**
-   * Build a combined CA bundle (system CAs + proxy CA) for full system trust.
-   * When enabled, tools like curl, Python, and Go will also trust the proxy.
+   * Build a combined CA bundle (system CAs + OneCLI CA) for full system trust.
+   * When enabled, tools like curl, Python, and Go will also trust OneCLI.
    * @default true
    */
   combineCaBundle?: boolean;

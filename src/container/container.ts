@@ -9,13 +9,13 @@ const SYSTEM_CA_PATHS = [
 ];
 
 /**
- * Build a combined CA bundle (system CAs + proxy CA) on the host.
+ * Build a combined CA bundle (system CAs + OneCLI CA) on the host.
  * Returns the path to the combined file, or `null` on failure.
  */
-export function buildCombinedCaBundle(proxyCaHostPath: string): string | null {
-  let proxyCa: string;
+export function buildCombinedCaBundle(onecliCaHostPath: string): string | null {
+  let onecliCa: string;
   try {
-    proxyCa = readFileSync(proxyCaHostPath, "utf8");
+    onecliCa = readFileSync(onecliCaHostPath, "utf8");
   } catch {
     return null;
   }
@@ -23,8 +23,8 @@ export function buildCombinedCaBundle(proxyCaHostPath: string): string | null {
   for (const sysPath of SYSTEM_CA_PATHS) {
     try {
       const sysCa = readFileSync(sysPath, "utf8");
-      const combined = sysCa.trimEnd() + "\n" + proxyCa.trimEnd() + "\n";
-      const outPath = join(dirname(proxyCaHostPath), "combined-ca.crt");
+      const combined = sysCa.trimEnd() + "\n" + onecliCa.trimEnd() + "\n";
+      const outPath = join(dirname(onecliCaHostPath), "combined-ca.crt");
       writeFileSync(outPath, combined);
       return outPath;
     } catch {

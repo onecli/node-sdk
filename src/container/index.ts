@@ -6,21 +6,21 @@ import type {
   ContainerMount,
 } from "./types.js";
 
-export class ProxyClient {
-  private proxyUrl: string;
+export class Client {
+  private onecliUrl: string;
   private timeout: number;
 
-  constructor(proxyUrl: string, timeout: number) {
-    this.proxyUrl = proxyUrl.replace(/\/+$/, "");
+  constructor(onecliUrl: string, timeout: number) {
+    this.onecliUrl = onecliUrl.replace(/\/+$/, "");
     this.timeout = timeout;
   }
 
   /**
-   * Fetch the raw container configuration from the proxy.
-   * Returns the env vars and mounts the proxy wants injected into the container.
+   * Fetch the raw container configuration from OneCLI.
+   * Returns the env vars and mounts to inject into the container.
    */
   getContainerConfig = async (): Promise<ContainerConfig> => {
-    const url = `${this.proxyUrl}/container-config`;
+    const url = `${this.onecliUrl}/container-config`;
 
     try {
       const res = await fetch(url, {
@@ -29,7 +29,7 @@ export class ProxyClient {
 
       if (!res.ok) {
         throw new OneCLIRequestError(
-          `Proxy returned ${res.status} ${res.statusText}`,
+          `OneCLI returned ${res.status} ${res.statusText}`,
           { url, statusCode: res.status },
         );
       }
@@ -47,10 +47,10 @@ export class ProxyClient {
   };
 
   /**
-   * Fetch the proxy's container config and push the corresponding
+   * Fetch the container config from OneCLI and push the corresponding
    * `-e` and `-v` flags onto the Docker `run` argument array.
    *
-   * Returns `true` if the proxy was reachable and config was applied.
+   * Returns `true` if OneCLI was reachable and config was applied.
    *
    * @param args  The Docker `run` argument array to mutate.
    * @param options  Optional configuration for the apply behavior.

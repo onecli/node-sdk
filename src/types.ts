@@ -1,11 +1,11 @@
 export interface OneCLIOptions {
   /**
-   * Base URL of the OneCLI proxy.
+   * Base URL of the OneCLI instance.
    * Example: "http://localhost:18080"
    *
-   * Can also be set via the `ONECLI_PROXY_URL` environment variable.
+   * Can also be set via the `ONECLI_URL` environment variable.
    */
-  proxyUrl?: string;
+  onecliUrl?: string;
 
   /**
    * Request timeout in milliseconds.

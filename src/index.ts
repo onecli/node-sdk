@@ -1,5 +1,5 @@
 export { OneCLI } from "./client.js";
-export { ProxyClient } from "./proxy/index.js";
+export { Client } from "./container/index.js";
 export { OneCLIError, OneCLIRequestError } from "./errors.js";
 
 export type { OneCLIOptions } from "./types.js";
@@ -7,30 +7,30 @@ export type {
   ContainerConfig,
   ContainerMount,
   ApplyContainerConfigOptions,
-} from "./proxy/types.js";
+} from "./container/types.js";
 
 // ---------------------------------------------------------------------------
 // Standalone convenience function
 // ---------------------------------------------------------------------------
 
-import { ProxyClient } from "./proxy/index.js";
+import { Client } from "./container/index.js";
 
 /**
- * Standalone helper: fetch the proxy's container config and push the
+ * Standalone helper: fetch the container config from OneCLI and push the
  * corresponding `-e` and `-v` flags onto a Docker `run` argument array.
  *
- * Returns `true` if the proxy was reachable and config was applied,
+ * Returns `true` if OneCLI was reachable and config was applied,
  * `false` otherwise.
  *
- * @param args      Docker `run` argument array to mutate.
- * @param proxyUrl  Base URL of the proxy (e.g. "http://localhost:18080").
- *                  Pass `undefined` / `null` to skip (returns `false`).
+ * @param args       Docker `run` argument array to mutate.
+ * @param onecliUrl  Base URL of OneCLI (e.g. "http://localhost:18080").
+ *                   Pass `undefined` / `null` to skip (returns `false`).
  */
-export async function applyProxyConfig(
+export async function applyOneCLIConfig(
   args: string[],
-  proxyUrl?: string | null,
+  onecliUrl?: string | null,
 ): Promise<boolean> {
-  if (!proxyUrl) return false;
-  const client = new ProxyClient(proxyUrl, 3000);
+  if (!onecliUrl) return false;
+  const client = new Client(onecliUrl, 3000);
   return client.applyContainerConfig(args);
 }

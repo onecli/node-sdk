@@ -1,34 +1,34 @@
 import { OneCLIError } from "./errors.js";
-import { ProxyClient } from "./proxy/index.js";
+import { Client } from "./container/index.js";
 import type { OneCLIOptions } from "./types.js";
 
 const DEFAULT_TIMEOUT = 5000;
 
 export class OneCLI {
-  private proxyUrl: string | undefined;
+  private onecliUrl: string | undefined;
   private timeout: number;
 
-  private proxyClient: ProxyClient | undefined;
+  private _client: Client | undefined;
 
   constructor(options?: OneCLIOptions) {
-    this.proxyUrl = options?.proxyUrl ?? process.env.ONECLI_PROXY_URL;
+    this.onecliUrl = options?.onecliUrl ?? process.env.ONECLI_URL;
     this.timeout = options?.timeout ?? DEFAULT_TIMEOUT;
 
-    if (this.proxyUrl) {
-      this.proxyClient = new ProxyClient(this.proxyUrl, this.timeout);
+    if (this.onecliUrl) {
+      this._client = new Client(this.onecliUrl, this.timeout);
     }
   }
 
   /**
-   * Access the proxy client for container configuration.
-   * Throws if no proxy URL was configured.
+   * Access the OneCLI client for container configuration.
+   * Throws if no OneCLI URL was configured.
    */
-  proxy = (): ProxyClient => {
-    if (!this.proxyClient) {
+  client = (): Client => {
+    if (!this._client) {
       throw new OneCLIError(
-        'No proxy URL configured. Pass { proxyUrl: "..." } to OneCLI() or set the ONECLI_PROXY_URL environment variable.',
+        'No OneCLI URL configured. Pass { onecliUrl: "..." } to OneCLI() or set the ONECLI_URL environment variable.',
       );
     }
-    return this.proxyClient;
+    return this._client;
   };
 }
