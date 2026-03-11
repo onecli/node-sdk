@@ -29,7 +29,7 @@
 ## Installation
 
 ```bash
-npm install @onecli-sdk/node
+pnpm add @onecli-sdk/node
 ```
 
 ## Requirements
@@ -208,10 +208,11 @@ OneCLI acts as a MITM proxy for containerized agents. When a container makes HTT
 ## Development
 
 ```bash
-npm install       # Install dependencies
-npm run build     # Build CJS + ESM
-npm run typecheck # Type-check without emitting
-npm run dev       # Watch mode
+pnpm install       # Install dependencies
+pnpm run build     # Build CJS + ESM
+pnpm run typecheck # Type-check without emitting
+pnpm run test      # Run tests
+pnpm run dev       # Watch mode
 ```
 
 ## License

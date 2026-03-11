@@ -23,8 +23,9 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm run build"
   },
   "keywords": [
     "onecli",
@@ -44,12 +45,14 @@
     "url": "https://github.com/onecli/node-sdk/issues"
   },
   "homepage": "https://onecli.sh",
+  "packageManager": "pnpm@10.30.1",
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
     "@types/node": "^22.5.1",
     "tsup": "^8.2.4",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^4.0.18"
   }
 }
