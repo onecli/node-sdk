@@ -3,29 +3,69 @@ import { OneCLI } from "../src/client.js";
 import { OneCLIError } from "../src/errors.js";
 
 describe("OneCLI", () => {
-  const originalEnv = process.env.ONECLI_URL;
+  const originalUrl = process.env.ONECLI_URL;
+  const originalApiKey = process.env.ONECLI_API_KEY;
 
   beforeEach(() => {
     delete process.env.ONECLI_URL;
+    delete process.env.ONECLI_API_KEY;
   });
 
   afterEach(() => {
-    if (originalEnv !== undefined) {
-      process.env.ONECLI_URL = originalEnv;
+    if (originalUrl !== undefined) {
+      process.env.ONECLI_URL = originalUrl;
     } else {
       delete process.env.ONECLI_URL;
+    }
+    if (originalApiKey !== undefined) {
+      process.env.ONECLI_API_KEY = originalApiKey;
+    } else {
+      delete process.env.ONECLI_API_KEY;
     }
   });
 
   describe("constructor", () => {
-    it("throws OneCLIError when apiKey is empty string", () => {
-      expect(() => new OneCLI({ apiKey: "" })).toThrow(OneCLIError);
-      expect(() => new OneCLI({ apiKey: "" })).toThrow("apiKey is required.");
+    it("throws OneCLIError when no apiKey is provided and env var is not set", () => {
+      expect(() => new OneCLI()).toThrow(OneCLIError);
+      expect(() => new OneCLI()).toThrow("apiKey is required");
     });
 
-    it("accepts a valid apiKey", () => {
+    it("throws OneCLIError when apiKey is empty string and env var is not set", () => {
+      expect(() => new OneCLI({ apiKey: "" })).toThrow(OneCLIError);
+    });
+
+    it("accepts apiKey from options", () => {
       const oc = new OneCLI({ apiKey: "oc_test123" });
       expect(oc).toBeInstanceOf(OneCLI);
+    });
+
+    it("falls back to ONECLI_API_KEY env var", () => {
+      process.env.ONECLI_API_KEY = "oc_from_env";
+      const oc = new OneCLI();
+      expect(oc).toBeInstanceOf(OneCLI);
+    });
+
+    it("prefers options.apiKey over ONECLI_API_KEY env var", () => {
+      process.env.ONECLI_API_KEY = "oc_from_env";
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ env: {}, caCertificate: "", caCertificateContainerPath: "" })),
+      );
+
+      const oc = new OneCLI({
+        apiKey: "oc_from_options",
+        url: "http://localhost:3000",
+      });
+      oc.getContainerConfig();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: { Authorization: "Bearer oc_from_options" },
+        }),
+      );
+
+      fetchSpy.mockRestore();
     });
 
     it("uses url from options when provided", () => {
@@ -45,7 +85,6 @@ describe("OneCLI", () => {
     it("prefers options.url over ONECLI_URL env var", () => {
       process.env.ONECLI_URL = "http://env-url:3000";
 
-      // We can verify by checking that fetch is called with the right URL
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(JSON.stringify({ env: {}, caCertificate: "", caCertificateContainerPath: "" })),
       );
