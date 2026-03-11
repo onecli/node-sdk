@@ -1,11 +1,10 @@
 export { OneCLI } from "./client.js";
-export { Client } from "./container/index.js";
+export { ContainerClient } from "./container/index.js";
 export { OneCLIError, OneCLIRequestError } from "./errors.js";
 
 export type { OneCLIOptions } from "./types.js";
 export type {
   ContainerConfig,
-  ContainerMount,
   ApplyContainerConfigOptions,
 } from "./container/types.js";
 
@@ -13,24 +12,25 @@ export type {
 // Standalone convenience function
 // ---------------------------------------------------------------------------
 
-import { Client } from "./container/index.js";
+import { OneCLI } from "./client.js";
 
 /**
  * Standalone helper: fetch the container config from OneCLI and push the
  * corresponding `-e` and `-v` flags onto a Docker `run` argument array.
  *
  * Returns `true` if OneCLI was reachable and config was applied,
- * `false` otherwise.
+ * `false` otherwise (including when `apiKey` is falsy).
  *
- * @param args       Docker `run` argument array to mutate.
- * @param onecliUrl  Base URL of OneCLI (e.g. "http://localhost:18080").
- *                   Pass `undefined` / `null` to skip (returns `false`).
+ * @param args    Docker `run` argument array to mutate.
+ * @param apiKey  User API key (`oc_...`). Pass `undefined` / empty to skip.
+ * @param url     Base URL of OneCLI. Defaults to `ONECLI_URL` env or `https://app.onecli.sh`.
  */
 export async function applyOneCLIConfig(
   args: string[],
-  onecliUrl?: string | null,
+  apiKey?: string | null,
+  url?: string,
 ): Promise<boolean> {
-  if (!onecliUrl) return false;
-  const client = new Client(onecliUrl, 3000);
-  return client.applyContainerConfig(args);
+  if (!apiKey) return false;
+  const oc = new OneCLI({ apiKey, url });
+  return oc.applyContainerConfig(args);
 }

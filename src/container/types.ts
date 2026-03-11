@@ -1,12 +1,7 @@
-export interface ContainerMount {
-  hostPath: string;
-  containerPath: string;
-  readonly: boolean;
-}
-
 export interface ContainerConfig {
   env: Record<string, string>;
-  mounts: ContainerMount[];
+  caCertificate: string;
+  caCertificateContainerPath: string;
 }
 
 export interface ApplyContainerConfigOptions {

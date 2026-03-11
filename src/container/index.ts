@@ -1,29 +1,27 @@
 import { OneCLIError, OneCLIRequestError, toOneCLIError } from "../errors.js";
-import { buildCombinedCaBundle } from "./container.js";
-import type {
-  ApplyContainerConfigOptions,
-  ContainerConfig,
-  ContainerMount,
-} from "./types.js";
+import { writeCaCertificate, buildCombinedCaBundle } from "./ca.js";
+import type { ApplyContainerConfigOptions, ContainerConfig } from "./types.js";
 
-export class Client {
-  private onecliUrl: string;
+export class ContainerClient {
+  private baseUrl: string;
+  private apiKey: string;
   private timeout: number;
 
-  constructor(onecliUrl: string, timeout: number) {
-    this.onecliUrl = onecliUrl.replace(/\/+$/, "");
+  constructor(baseUrl: string, apiKey: string, timeout: number) {
+    this.baseUrl = baseUrl.replace(/\/+$/, "");
+    this.apiKey = apiKey;
     this.timeout = timeout;
   }
 
   /**
    * Fetch the raw container configuration from OneCLI.
-   * Returns the env vars and mounts to inject into the container.
    */
   getContainerConfig = async (): Promise<ContainerConfig> => {
-    const url = `${this.onecliUrl}/container-config`;
+    const url = `${this.baseUrl}/api/container-config`;
 
     try {
       const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${this.apiKey}` },
         signal: AbortSignal.timeout(this.timeout),
       });
 
@@ -50,10 +48,8 @@ export class Client {
    * Fetch the container config from OneCLI and push the corresponding
    * `-e` and `-v` flags onto the Docker `run` argument array.
    *
-   * Returns `true` if OneCLI was reachable and config was applied.
-   *
-   * @param args  The Docker `run` argument array to mutate.
-   * @param options  Optional configuration for the apply behavior.
+   * Returns `true` if OneCLI was reachable and config was applied,
+   * `false` otherwise (graceful degradation).
    */
   applyContainerConfig = async (
     args: string[],
@@ -68,40 +64,28 @@ export class Client {
       return false;
     }
 
-    // Inject environment variables
+    // Inject server-controlled environment variables
     for (const [key, value] of Object.entries(config.env)) {
       args.push("-e", `${key}=${value}`);
     }
 
-    // Inject volume mounts
-    for (const mount of config.mounts) {
-      if (mount.readonly) {
-        args.push("-v", `${mount.hostPath}:${mount.containerPath}:ro`);
-      } else {
-        args.push("-v", `${mount.hostPath}:${mount.containerPath}`);
-      }
-    }
+    // Write CA certificate to host temp file and mount into container
+    const hostCaPath = writeCaCertificate(config.caCertificate);
+    args.push(
+      "-v",
+      `${hostCaPath}:${config.caCertificateContainerPath}:ro`,
+    );
 
     // Build combined CA bundle for system-wide trust (curl, Python, Go, etc.)
-    // NODE_EXTRA_CA_CERTS handles Node.js; SSL_CERT_FILE handles everything else.
     if (combineCaBundle) {
-      const nodeExtraCa = config.env["NODE_EXTRA_CA_CERTS"];
-      if (nodeExtraCa) {
-        const caMount = config.mounts.find(
-          (m) => m.containerPath === nodeExtraCa,
-        );
-        if (caMount) {
-          const combinedPath = buildCombinedCaBundle(caMount.hostPath);
-          if (combinedPath) {
-            args.push("-e", "SSL_CERT_FILE=/tmp/combined-ca.crt");
-            args.push("-v", `${combinedPath}:/tmp/combined-ca.crt:ro`);
-          }
-        }
+      const combinedPath = buildCombinedCaBundle(config.caCertificate);
+      if (combinedPath) {
+        args.push("-e", "SSL_CERT_FILE=/tmp/onecli-combined-ca.pem");
+        args.push("-v", `${combinedPath}:/tmp/onecli-combined-ca.pem:ro`);
       }
     }
 
     // On Linux, host.docker.internal needs explicit mapping.
-    // macOS Docker Desktop provides it automatically.
     if (addHostMapping && process.platform === "linux") {
       args.push("--add-host", "host.docker.internal:host-gateway");
     }

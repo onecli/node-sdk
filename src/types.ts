@@ -1,11 +1,14 @@
 export interface OneCLIOptions {
   /**
-   * Base URL of the OneCLI instance.
-   * Example: "http://localhost:18080"
-   *
-   * Can also be set via the `ONECLI_URL` environment variable.
+   * User API key from the OneCLI dashboard (starts with `oc_`).
    */
-  onecliUrl?: string;
+  apiKey: string;
+
+  /**
+   * Base URL of the OneCLI instance.
+   * Falls back to `ONECLI_URL` env var, then `https://app.onecli.sh`.
+   */
+  url?: string;
 
   /**
    * Request timeout in milliseconds.
