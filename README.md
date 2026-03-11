@@ -1,47 +1,35 @@
 <h1 align="center">
-  <code>@onecli/sdk</code>
+  <code>@onecli-sdk/node</code>
 </h1>
 
 <p align="center">
-  Official Node.js SDK for <a href="https://onecli.sh">OneCLI</a>. Connect AI agents to external services via plugins.
+  Official Node.js SDK for <a href="https://onecli.sh">OneCLI</a>. Route AI agent traffic through the OneCLI proxy — agents never see real credentials.
 </p>
 
 <p align="center">
   <a href="https://onecli.sh/docs">Documentation</a> &nbsp;|&nbsp;
   <a href="https://onecli.sh">Website</a> &nbsp;|&nbsp;
-  <a href="https://github.com/onecli/onecli-sdk">GitHub</a>
+  <a href="https://github.com/onecli/node-sdk">GitHub</a>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@onecli/sdk">
-    <img src="https://img.shields.io/npm/v/@onecli/sdk.svg" alt="npm version" />
+  <a href="https://www.npmjs.com/package/@onecli-sdk/node">
+    <img src="https://img.shields.io/npm/v/@onecli-sdk/node.svg" alt="npm version" />
   </a>
-  <a href="https://github.com/onecli/onecli-sdk/blob/main/LICENSE">
+  <a href="https://github.com/onecli/node-sdk/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" />
   </a>
-  <a href="https://www.npmjs.com/package/@onecli/sdk">
-    <img src="https://img.shields.io/node/v/@onecli/sdk.svg" alt="Node.js version" />
+  <a href="https://www.npmjs.com/package/@onecli-sdk/node">
+    <img src="https://img.shields.io/node/v/@onecli-sdk/node.svg" alt="Node.js version" />
   </a>
 </p>
 
 ---
 
-## What is OneCLI?
-
-**OneCLI** (`oc`) is a thin, agent-first CLI that connects AI agents to external services via plugins. The SDK provides a programmatic interface for Node.js applications to interact with OneCLI, allowing containerized agents to access external APIs without exposing credentials.
-
 ## Installation
 
 ```bash
-npm install @onecli/sdk
-```
-
-```bash
-pnpm add @onecli/sdk
-```
-
-```bash
-yarn add @onecli/sdk
+npm install @onecli-sdk/node
 ```
 
 ## Requirements
@@ -52,57 +40,55 @@ yarn add @onecli/sdk
 
 ## Quick Start
 
-### Standalone function
+### Standalone function (simplest)
 
-The simplest way to use the SDK. A single function that configures Docker containers to use OneCLI:
+A single function that fetches config from OneCLI and injects Docker flags:
 
 ```typescript
-import { applyOneCLIConfig } from "@onecli/sdk";
+import { applyOneCLIConfig } from "@onecli-sdk/node";
 
 const args = ["run", "-i", "--rm", "--name", "my-agent"];
 
 // Fetches container config and pushes -e / -v flags onto args
-const active = await applyOneCLIConfig(args, "http://localhost:18080");
+const active = await applyOneCLIConfig(args, process.env.ONECLI_KEY);
 
-// args now contains OneCLI env vars and volume mounts
+// args now contains proxy env vars and CA certificate mounts
 console.log(active); // true if OneCLI was reachable
 ```
 
 ### Class-based client
 
-For more control, use the `OneCLI` client class:
+For more control:
 
 ```typescript
-import { OneCLI } from "@onecli/sdk";
+import { OneCLI } from "@onecli-sdk/node";
 
 const oc = new OneCLI({
-  onecliUrl: "http://localhost:18080",
+  apiKey: "oc_...",                    // required: from OneCLI dashboard
+  url: "http://localhost:3000",        // optional: defaults to https://app.onecli.sh
 });
 
 // Get raw container configuration
-const config = await oc.client().getContainerConfig();
-console.log(config.env);    // { HTTPS_PROXY: "...", NODE_EXTRA_CA_CERTS: "...", ... }
-console.log(config.mounts); // [{ hostPath: "...", containerPath: "...", readonly: true }]
+const config = await oc.getContainerConfig();
+console.log(config.env);              // { HTTPS_PROXY: "...", HTTP_PROXY: "...", ... }
+console.log(config.caCertificate);    // PEM content
 
 // Or apply directly to Docker run args
 const args = ["run", "-i", "--rm", "my-image"];
-const active = await oc.client().applyContainerConfig(args);
+const active = await oc.applyContainerConfig(args);
 ```
 
 ### Environment variable
 
-Instead of passing `onecliUrl` explicitly, set the `ONECLI_URL` environment variable:
+Instead of passing `url` explicitly, set the `ONECLI_URL` environment variable:
 
 ```bash
-export ONECLI_URL=http://localhost:18080
+export ONECLI_URL=http://localhost:3000
 ```
 
 ```typescript
-import { OneCLI } from "@onecli/sdk";
-
-// Automatically reads from ONECLI_URL
-const oc = new OneCLI();
-const active = await oc.client().applyContainerConfig(args);
+const oc = new OneCLI({ apiKey: "oc_..." });
+// Automatically reads from ONECLI_URL, falls back to https://app.onecli.sh
 ```
 
 ## API Reference
@@ -112,69 +98,60 @@ const active = await oc.client().applyContainerConfig(args);
 Main SDK client.
 
 ```typescript
-new OneCLI(options?: OneCLIOptions)
+new OneCLI(options: OneCLIOptions)
 ```
 
-| Option      | Type     | Default                    | Description                     |
-| ----------- | -------- | -------------------------- | ------------------------------- |
-| `onecliUrl` | `string` | `process.env.ONECLI_URL`   | Base URL of the OneCLI instance |
-| `timeout`   | `number` | `5000`                     | Request timeout in milliseconds |
+| Option    | Type     | Required | Default                             | Description                     |
+| --------- | -------- | -------- | ----------------------------------- | ------------------------------- |
+| `apiKey`  | `string` | Yes      | —                                   | User API key (`oc_...`)         |
+| `url`     | `string` | No       | `ONECLI_URL` or `https://app.onecli.sh` | Base URL of the OneCLI instance |
+| `timeout` | `number` | No       | `5000`                              | Request timeout in milliseconds |
 
-#### `oc.client()`
-
-Returns the `Client` for container configuration. Throws `OneCLIError` if no OneCLI URL is configured.
-
----
-
-### `Client`
-
-Manages communication with the OneCLI `/container-config` endpoint.
-
-#### `client.getContainerConfig()`
+#### `oc.getContainerConfig()`
 
 Fetch the raw container configuration from OneCLI.
 
 ```typescript
-const config = await oc.client().getContainerConfig();
-// Returns: { env: Record<string, string>, mounts: ContainerMount[] }
+const config = await oc.getContainerConfig();
+// Returns: { env, caCertificate, caCertificateContainerPath }
 ```
 
-**Throws** `OneCLIRequestError` if OneCLI returns a non-200 response.
+**Throws** `OneCLIRequestError` on non-200 response.
 
-#### `client.applyContainerConfig(args, options?)`
+#### `oc.applyContainerConfig(args, options?)`
 
-Fetch the container config and push Docker flags onto the `args` array. Returns `true` if config was applied, `false` if OneCLI was unreachable.
+Fetch config and push Docker flags onto the `args` array. Returns `true` on success, `false` on failure (graceful degradation).
 
 ```typescript
-const active = await oc.client().applyContainerConfig(args, {
+const active = await oc.applyContainerConfig(args, {
   combineCaBundle: true,  // Merge system + OneCLI CAs (default: true)
   addHostMapping: true,   // Add --add-host on Linux (default: true)
 });
 ```
 
-| Option           | Type      | Default | Description                                           |
-| ---------------- | --------- | ------- | ----------------------------------------------------- |
-| `combineCaBundle`| `boolean` | `true`  | Build combined CA bundle for system-wide trust         |
-| `addHostMapping` | `boolean` | `true`  | Add `host.docker.internal` mapping on Linux            |
+| Option           | Type      | Default | Description                                    |
+| ---------------- | --------- | ------- | ---------------------------------------------- |
+| `combineCaBundle`| `boolean` | `true`  | Build combined CA bundle for system-wide trust  |
+| `addHostMapping` | `boolean` | `true`  | Add `host.docker.internal` mapping on Linux     |
 
 **What it does:**
-1. Fetches `/container-config` from OneCLI
-2. Pushes `-e KEY=VALUE` for each environment variable
-3. Pushes `-v host:container[:ro]` for each mount
-4. Builds a combined CA bundle (system CAs + OneCLI CA) so all tools trust OneCLI
+1. Fetches `/api/container-config` with `Authorization: Bearer {apiKey}`
+2. Pushes `-e KEY=VALUE` for each server-controlled environment variable
+3. Writes CA certificate to a temp file and mounts it into the container
+4. Builds a combined CA bundle (system CAs + OneCLI CA) so curl, Python, Go, etc. also trust OneCLI
 5. Adds `--add-host host.docker.internal:host-gateway` on Linux
 
 ---
 
-### `applyOneCLIConfig(args, onecliUrl?)`
+### `applyOneCLIConfig(args, apiKey, url?)`
 
-Standalone convenience function. Equivalent to creating a `Client` and calling `applyContainerConfig`.
+Standalone convenience function. Creates an `OneCLI` client internally.
 
 ```typescript
-import { applyOneCLIConfig } from "@onecli/sdk";
+import { applyOneCLIConfig } from "@onecli-sdk/node";
 
-const active = await applyOneCLIConfig(args, "http://localhost:18080");
-// Pass undefined/null to skip (returns false immediately)
+const active = await applyOneCLIConfig(args, process.env.ONECLI_KEY);
+// Pass undefined/null apiKey to skip (returns false immediately)
 ```
 
 ---
@@ -183,34 +160,25 @@ const active = await applyOneCLIConfig(args, "http://localhost:18080");
 
 #### `OneCLIError`
 
-General SDK error.
+General SDK error (e.g. missing `apiKey`).
 
 ```typescript
-import { OneCLIError } from "@onecli/sdk";
-
-try {
-  oc.client(); // throws if no OneCLI URL configured
-} catch (error) {
-  if (error instanceof OneCLIError) {
-    console.error(error.message);
-  }
-}
+import { OneCLIError } from "@onecli-sdk/node";
 ```
 
 #### `OneCLIRequestError`
 
-HTTP request error with context.
+HTTP request error with `url` and `statusCode` properties.
 
 ```typescript
-import { OneCLIRequestError } from "@onecli/sdk";
+import { OneCLIRequestError } from "@onecli-sdk/node";
 
 try {
-  await oc.client().getContainerConfig();
+  await oc.getContainerConfig();
 } catch (error) {
   if (error instanceof OneCLIRequestError) {
     console.error(error.url);        // Request URL
     console.error(error.statusCode); // HTTP status code
-    console.error(error.message);    // [URL=...] [StatusCode=...] ...
   }
 }
 ```
@@ -219,44 +187,31 @@ try {
 
 ### Types
 
-All types are exported for use in your own code:
-
 ```typescript
 import type {
   OneCLIOptions,
   ContainerConfig,
-  ContainerMount,
   ApplyContainerConfigOptions,
-} from "@onecli/sdk";
+} from "@onecli-sdk/node";
 ```
 
 ## How It Works
 
-OneCLI runs on the host machine and acts as a MITM proxy for containerized agents. When a container makes HTTPS requests to intercepted domains (e.g. `api.anthropic.com`), OneCLI:
+OneCLI acts as a MITM proxy for containerized agents. When a container makes HTTPS requests to intercepted domains (e.g. `api.anthropic.com`), OneCLI:
 
 1. Terminates TLS using a local CA certificate
-2. Inspects the request and injects real credentials (replacing placeholder tokens)
+2. Inspects the request and injects real credentials
 3. Forwards the request to the upstream service
-4. Returns the response to the container
 
-This means **containers never see real API keys**. They only have placeholder tokens that OneCLI swaps out transparently.
-
-The SDK configures containers with the right environment variables (`HTTPS_PROXY`, `NODE_EXTRA_CA_CERTS`) and volume mounts (OneCLI CA certificate) so this works automatically.
+**Containers never see real API keys.** The SDK configures containers with the right environment variables (`HTTPS_PROXY`, `HTTP_PROXY`, `NODE_EXTRA_CA_CERTS`) and CA certificate mounts so this works automatically.
 
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Build
-npm run build
-
-# Type-check without emitting
-npm run typecheck
-
-# Watch mode
-npm run dev
+npm install       # Install dependencies
+npm run build     # Build CJS + ESM
+npm run typecheck # Type-check without emitting
+npm run dev       # Watch mode
 ```
 
 ## License

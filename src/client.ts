@@ -1,34 +1,40 @@
 import { OneCLIError } from "./errors.js";
-import { Client } from "./container/index.js";
+import { ContainerClient } from "./container/index.js";
 import type { OneCLIOptions } from "./types.js";
+import type { ApplyContainerConfigOptions, ContainerConfig } from "./container/types.js";
 
+const DEFAULT_URL = "https://app.onecli.sh";
 const DEFAULT_TIMEOUT = 5000;
 
 export class OneCLI {
-  private onecliUrl: string | undefined;
-  private timeout: number;
+  private containerClient: ContainerClient;
 
-  private _client: Client | undefined;
-
-  constructor(options?: OneCLIOptions) {
-    this.onecliUrl = options?.onecliUrl ?? process.env.ONECLI_URL;
-    this.timeout = options?.timeout ?? DEFAULT_TIMEOUT;
-
-    if (this.onecliUrl) {
-      this._client = new Client(this.onecliUrl, this.timeout);
+  constructor(options: OneCLIOptions) {
+    if (!options.apiKey) {
+      throw new OneCLIError("apiKey is required.");
     }
+
+    const url = options.url ?? process.env.ONECLI_URL ?? DEFAULT_URL;
+    const timeout = options.timeout ?? DEFAULT_TIMEOUT;
+
+    this.containerClient = new ContainerClient(url, options.apiKey, timeout);
   }
 
   /**
-   * Access the OneCLI client for container configuration.
-   * Throws if no OneCLI URL was configured.
+   * Fetch the raw container configuration from OneCLI.
    */
-  client = (): Client => {
-    if (!this._client) {
-      throw new OneCLIError(
-        'No OneCLI URL configured. Pass { onecliUrl: "..." } to OneCLI() or set the ONECLI_URL environment variable.',
-      );
-    }
-    return this._client;
+  getContainerConfig = (): Promise<ContainerConfig> => {
+    return this.containerClient.getContainerConfig();
+  };
+
+  /**
+   * Fetch config and apply `-e` / `-v` flags to a Docker `run` argument array.
+   * Returns `true` on success, `false` on failure (graceful degradation).
+   */
+  applyContainerConfig = (
+    args: string[],
+    options?: ApplyContainerConfigOptions,
+  ): Promise<boolean> => {
+    return this.containerClient.applyContainerConfig(args, options);
   };
 }
