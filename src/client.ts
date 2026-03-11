@@ -9,15 +9,18 @@ const DEFAULT_TIMEOUT = 5000;
 export class OneCLI {
   private containerClient: ContainerClient;
 
-  constructor(options: OneCLIOptions) {
-    if (!options.apiKey) {
-      throw new OneCLIError("apiKey is required.");
+  constructor(options: OneCLIOptions = {}) {
+    const apiKey = options.apiKey ?? process.env.ONECLI_API_KEY;
+    if (!apiKey) {
+      throw new OneCLIError(
+        "apiKey is required. Pass it in options or set the ONECLI_API_KEY environment variable.",
+      );
     }
 
     const url = options.url ?? process.env.ONECLI_URL ?? DEFAULT_URL;
     const timeout = options.timeout ?? DEFAULT_TIMEOUT;
 
-    this.containerClient = new ContainerClient(url, options.apiKey, timeout);
+    this.containerClient = new ContainerClient(url, apiKey, timeout);
   }
 
   /**

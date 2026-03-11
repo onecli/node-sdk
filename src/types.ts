@@ -1,8 +1,9 @@
 export interface OneCLIOptions {
   /**
    * User API key from the OneCLI dashboard (starts with `oc_`).
+   * Falls back to `ONECLI_API_KEY` env var if not provided.
    */
-  apiKey: string;
+  apiKey?: string;
 
   /**
    * Base URL of the OneCLI instance.
