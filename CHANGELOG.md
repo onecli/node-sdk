@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/onecli/node-sdk/compare/v0.1.3...v0.1.4) (2026-03-11)
+
+
+### Bug Fixes
+
+* package ([#8](https://github.com/onecli/node-sdk/issues/8)) ([949f67c](https://github.com/onecli/node-sdk/commit/949f67c40c3dbeecc05a47e4d19fea51839358fa))
+
 ## [0.1.3](https://github.com/onecli/node-sdk/compare/v0.1.2...v0.1.3) (2026-03-11)
 
 
