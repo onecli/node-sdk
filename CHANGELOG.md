@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/onecli/node-sdk/compare/v0.1.2...v0.1.3) (2026-03-11)
+
+
+### Bug Fixes
+
+* remove standalone ([#6](https://github.com/onecli/node-sdk/issues/6)) ([3a6c077](https://github.com/onecli/node-sdk/commit/3a6c077e348cb027179209780ecaf1f5e633f24b))
+
 ## [0.1.2](https://github.com/onecli/node-sdk/compare/v0.1.1...v0.1.2) (2026-03-11)
 
 
