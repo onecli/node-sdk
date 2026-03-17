@@ -64,6 +64,26 @@ describe("ContainerClient", () => {
       );
     });
 
+    it("omits auth header when apiKey is empty", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(MOCK_CONFIG)),
+      );
+
+      const client = new ContainerClient(
+        "http://localhost:3000",
+        "",
+        5000,
+      );
+      await client.getContainerConfig();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: {},
+        }),
+      );
+    });
+
     it("returns parsed ContainerConfig on success", async () => {
       fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(JSON.stringify(MOCK_CONFIG)),

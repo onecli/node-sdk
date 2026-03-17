@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { OneCLI } from "../src/client.js";
-import { OneCLIError } from "../src/errors.js";
+import { OneCLIRequestError } from "../src/errors.js";
 
 describe("OneCLI", () => {
   const originalUrl = process.env.ONECLI_URL;
@@ -25,13 +25,14 @@ describe("OneCLI", () => {
   });
 
   describe("constructor", () => {
-    it("throws OneCLIError when no apiKey is provided and env var is not set", () => {
-      expect(() => new OneCLI()).toThrow(OneCLIError);
-      expect(() => new OneCLI()).toThrow("apiKey is required");
+    it("creates instance without apiKey (local mode)", () => {
+      const oc = new OneCLI();
+      expect(oc).toBeInstanceOf(OneCLI);
     });
 
-    it("throws OneCLIError when apiKey is empty string and env var is not set", () => {
-      expect(() => new OneCLI({ apiKey: "" })).toThrow(OneCLIError);
+    it("creates instance with empty apiKey", () => {
+      const oc = new OneCLI({ apiKey: "" });
+      expect(oc).toBeInstanceOf(OneCLI);
     });
 
     it("accepts apiKey from options", () => {
@@ -62,6 +63,24 @@ describe("OneCLI", () => {
         expect.any(String),
         expect.objectContaining({
           headers: { Authorization: "Bearer oc_from_options" },
+        }),
+      );
+
+      fetchSpy.mockRestore();
+    });
+
+    it("omits auth header when no apiKey is provided", () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ env: {}, caCertificate: "", caCertificateContainerPath: "" })),
+      );
+
+      const oc = new OneCLI({ url: "http://localhost:3000" });
+      oc.getContainerConfig();
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          headers: {},
         }),
       );
 
@@ -134,6 +153,43 @@ describe("OneCLI", () => {
       const result = await oc.applyContainerConfig([]);
 
       expect(result).toBe(false);
+      fetchSpy.mockRestore();
+    });
+  });
+
+  describe("createAgent", () => {
+    it("delegates to AgentsClient", async () => {
+      const mockResponse = {
+        id: "clxyz123",
+        name: "My Agent",
+        identifier: "my-agent",
+        createdAt: "2025-01-01T00:00:00.000Z",
+      };
+
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(mockResponse), { status: 201 }),
+      );
+
+      const oc = new OneCLI({ apiKey: "oc_test", url: "http://localhost:3000" });
+      const agent = await oc.createAgent({ name: "My Agent", identifier: "my-agent" });
+
+      expect(agent).toEqual(mockResponse);
+      fetchSpy.mockRestore();
+    });
+
+    it("throws OneCLIRequestError on 409 conflict", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ error: "identifier already exists" }), {
+          status: 409,
+          statusText: "Conflict",
+        }),
+      );
+
+      const oc = new OneCLI({ apiKey: "oc_test", url: "http://localhost:3000" });
+
+      await expect(oc.createAgent({ name: "Test", identifier: "test" })).rejects.toThrow(
+        OneCLIRequestError,
+      );
       fetchSpy.mockRestore();
     });
   });
