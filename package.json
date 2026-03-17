@@ -1,6 +1,6 @@
 {
   "name": "@onecli-sh/sdk",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Official Node.js SDK for OneCLI. Connect AI agents to external services via the OneCLI proxy.",
   "main": "./lib/index.js",
   "module": "./lib/index.mjs",

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/onecli/node-sdk/compare/v0.1.4...v0.1.5) (2026-03-17)
+
+
+### Bug Fixes
+
+* make apiKey optional and add createAgent method ([#10](https://github.com/onecli/node-sdk/issues/10)) ([b8a3137](https://github.com/onecli/node-sdk/commit/b8a3137779a7084f954a4cfedaca1ec15cc85aa7))
+
 ## [0.1.4](https://github.com/onecli/node-sdk/compare/v0.1.3...v0.1.4) (2026-03-11)
 
 
