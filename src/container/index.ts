@@ -20,8 +20,13 @@ export class ContainerClient {
     const url = `${this.baseUrl}/api/container-config`;
 
     try {
+      const headers: Record<string, string> = {};
+      if (this.apiKey) {
+        headers["Authorization"] = `Bearer ${this.apiKey}`;
+      }
+
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${this.apiKey}` },
+        headers,
         signal: AbortSignal.timeout(this.timeout),
       });
 

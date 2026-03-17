@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { OneCLI, OneCLIError, ContainerClient } from "../src/index.js";
+import { OneCLI, OneCLIError, ContainerClient, AgentsClient } from "../src/index.js";
 
 describe("package exports", () => {
   it("exports OneCLI class", () => {
@@ -12,5 +12,9 @@ describe("package exports", () => {
 
   it("exports ContainerClient", () => {
     expect(ContainerClient).toBeDefined();
+  });
+
+  it("exports AgentsClient", () => {
+    expect(AgentsClient).toBeDefined();
   });
 });
