@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/onecli/node-sdk/compare/v0.1.5...v0.1.6) (2026-03-18)
+
+
+### Bug Fixes
+
+* pass agent parameter to container config endpoint ([#12](https://github.com/onecli/node-sdk/issues/12)) ([5549294](https://github.com/onecli/node-sdk/commit/5549294e0595edb90b03b9b6b7dfaf7d90c0fd7e))
+
 ## [0.1.5](https://github.com/onecli/node-sdk/compare/v0.1.4...v0.1.5) (2026-03-17)
 
 
