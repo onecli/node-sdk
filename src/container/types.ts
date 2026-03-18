@@ -18,4 +18,9 @@ export interface ApplyContainerConfigOptions {
    * @default true
    */
   addHostMapping?: boolean;
+
+  /**
+   * Agent identifier to fetch config for. Uses the default agent if omitted.
+   */
+  agent?: string;
 }

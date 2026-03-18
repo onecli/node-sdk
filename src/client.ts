@@ -29,8 +29,8 @@ export class OneCLI {
   /**
    * Fetch the raw container configuration from OneCLI.
    */
-  getContainerConfig = (): Promise<ContainerConfig> => {
-    return this.containerClient.getContainerConfig();
+  getContainerConfig = (agent?: string): Promise<ContainerConfig> => {
+    return this.containerClient.getContainerConfig(agent);
   };
 
   /**

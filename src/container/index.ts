@@ -16,8 +16,10 @@ export class ContainerClient {
   /**
    * Fetch the raw container configuration from OneCLI.
    */
-  getContainerConfig = async (): Promise<ContainerConfig> => {
-    const url = `${this.baseUrl}/api/container-config`;
+  getContainerConfig = async (agent?: string): Promise<ContainerConfig> => {
+    const url = agent
+      ? `${this.baseUrl}/api/container-config?agent=${encodeURIComponent(agent)}`
+      : `${this.baseUrl}/api/container-config`;
 
     try {
       const headers: Record<string, string> = {};
@@ -60,11 +62,12 @@ export class ContainerClient {
     args: string[],
     options?: ApplyContainerConfigOptions,
   ): Promise<boolean> => {
-    const { combineCaBundle = true, addHostMapping = true } = options ?? {};
+    const { combineCaBundle = true, addHostMapping = true, agent } =
+      options ?? {};
 
     let config: ContainerConfig;
     try {
-      config = await this.getContainerConfig();
+      config = await this.getContainerConfig(agent);
     } catch {
       return false;
     }
