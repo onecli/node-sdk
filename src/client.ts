@@ -8,6 +8,7 @@ import type {
 import type {
   CreateAgentInput,
   CreateAgentResponse,
+  EnsureAgentResponse,
 } from "./agents/types.js";
 
 const DEFAULT_URL = "https://app.onecli.sh";
@@ -49,5 +50,12 @@ export class OneCLI {
    */
   createAgent = (input: CreateAgentInput): Promise<CreateAgentResponse> => {
     return this.agentsClient.createAgent(input);
+  };
+
+  /**
+   * Ensure an agent exists. Creates it if missing, returns normally if it already exists.
+   */
+  ensureAgent = (input: CreateAgentInput): Promise<EnsureAgentResponse> => {
+    return this.agentsClient.ensureAgent(input);
   };
 }
