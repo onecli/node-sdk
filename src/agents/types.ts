@@ -12,3 +12,10 @@ export interface CreateAgentResponse {
   identifier: string;
   createdAt: string;
 }
+
+export interface EnsureAgentResponse {
+  name: string;
+  identifier: string;
+  /** Whether the agent was newly created. `false` if it already existed. */
+  created: boolean;
+}

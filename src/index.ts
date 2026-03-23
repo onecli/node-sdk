@@ -11,4 +11,5 @@ export type {
 export type {
   CreateAgentInput,
   CreateAgentResponse,
+  EnsureAgentResponse,
 } from "./agents/types.js";

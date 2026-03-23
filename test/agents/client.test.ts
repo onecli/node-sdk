@@ -162,7 +162,7 @@ describe("AgentsClient", () => {
       ).rejects.toThrow("fetch failed");
     });
 
-    it("re-throws OneCLIRequestError without wrapping", async () => {
+    it("re-throws OneCLIRequestError on 500 without wrapping", async () => {
       fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response("", { status: 500, statusText: "Internal Server Error" }),
       );
@@ -178,6 +178,90 @@ describe("AgentsClient", () => {
         .catch((e: unknown) => e);
       expect(err).toBeInstanceOf(OneCLIRequestError);
       expect((err as OneCLIRequestError).name).toBe("OneCLIRequestError");
+    });
+  });
+
+  describe("ensureAgent", () => {
+    it("returns created: true when agent is newly created", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(MOCK_AGENT), { status: 201 }),
+      );
+
+      const client = new AgentsClient(
+        "http://localhost:3000",
+        "oc_test",
+        5000,
+      );
+      const result = await client.ensureAgent({
+        name: "My Agent",
+        identifier: "my-agent",
+      });
+
+      expect(result).toEqual({
+        name: "My Agent",
+        identifier: "my-agent",
+        created: true,
+      });
+    });
+
+    it("returns created: false when agent already exists (409)", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(
+          JSON.stringify({ error: "identifier already exists" }),
+          { status: 409, statusText: "Conflict" },
+        ),
+      );
+
+      const client = new AgentsClient(
+        "http://localhost:3000",
+        "oc_test",
+        5000,
+      );
+      const result = await client.ensureAgent({
+        name: "My Agent",
+        identifier: "my-agent",
+      });
+
+      expect(result).toEqual({
+        name: "My Agent",
+        identifier: "my-agent",
+        created: false,
+      });
+    });
+
+    it("throws on non-409 errors", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          statusText: "Unauthorized",
+        }),
+      );
+
+      const client = new AgentsClient(
+        "http://localhost:3000",
+        "oc_bad",
+        5000,
+      );
+
+      await expect(
+        client.ensureAgent({ name: "Test", identifier: "test" }),
+      ).rejects.toThrow(OneCLIRequestError);
+    });
+
+    it("throws on network errors", async () => {
+      fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockRejectedValue(new TypeError("fetch failed"));
+
+      const client = new AgentsClient(
+        "http://localhost:3000",
+        "oc_test",
+        5000,
+      );
+
+      await expect(
+        client.ensureAgent({ name: "Test", identifier: "test" }),
+      ).rejects.toThrow(OneCLIError);
     });
   });
 });

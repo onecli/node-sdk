@@ -3,7 +3,11 @@ import {
   OneCLIRequestError,
   toOneCLIError,
 } from "../errors.js";
-import type { CreateAgentInput, CreateAgentResponse } from "./types.js";
+import type {
+  CreateAgentInput,
+  CreateAgentResponse,
+  EnsureAgentResponse,
+} from "./types.js";
 
 export class AgentsClient {
   private baseUrl: string;
@@ -55,6 +59,28 @@ export class AgentsClient {
         throw error;
       }
       throw toOneCLIError(error);
+    }
+  };
+
+  /**
+   * Ensure an agent exists. Creates it if missing, returns normally if it already exists.
+   * Unlike `createAgent`, this method treats a 409 conflict as success.
+   */
+  ensureAgent = async (
+    input: CreateAgentInput,
+  ): Promise<EnsureAgentResponse> => {
+    try {
+      await this.createAgent(input);
+      return { name: input.name, identifier: input.identifier, created: true };
+    } catch (error) {
+      if (error instanceof OneCLIRequestError && error.statusCode === 409) {
+        return {
+          name: input.name,
+          identifier: input.identifier,
+          created: false,
+        };
+      }
+      throw error;
     }
   };
 }
