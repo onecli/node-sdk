@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/onecli/node-sdk/compare/v0.1.6...v0.2.0) (2026-03-23)
+
+
+### Features
+
+* add ensureAgent method for idempotent agent creation ([#14](https://github.com/onecli/node-sdk/issues/14)) ([eeb8ac4](https://github.com/onecli/node-sdk/commit/eeb8ac4935a33ccbcf525c1a7d1516b709ab85b0))
+
 ## [0.1.6](https://github.com/onecli/node-sdk/compare/v0.1.5...v0.1.6) (2026-03-18)
 
 
