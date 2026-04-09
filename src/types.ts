@@ -16,4 +16,11 @@ export interface OneCLIOptions {
    * @default 5000
    */
   timeout?: number;
+
+  /**
+   * Gateway URL for manual approval polling.
+   * Falls back to `ONECLI_GATEWAY_URL` env var, then auto-resolved
+   * from the web app via `GET /api/gateway-url`.
+   */
+  gatewayUrl?: string;
 }
