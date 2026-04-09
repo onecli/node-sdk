@@ -89,6 +89,8 @@ export class ContainerClient {
       const combinedPath = buildCombinedCaBundle(config.caCertificate);
       if (combinedPath) {
         args.push("-e", "SSL_CERT_FILE=/tmp/onecli-combined-ca.pem");
+        // DENO_CERT: Deno does not respect SSL_CERT_FILE, it has its own env var
+        args.push("-e", "DENO_CERT=/tmp/onecli-combined-ca.pem");
         args.push("-v", `${combinedPath}:/tmp/onecli-combined-ca.pem:ro`);
       }
     }
