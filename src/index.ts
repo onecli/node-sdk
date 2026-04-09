@@ -1,6 +1,7 @@
 export { OneCLI } from "./client.js";
 export { ContainerClient } from "./container/index.js";
 export { AgentsClient } from "./agents/index.js";
+export { ApprovalClient } from "./approvals/index.js";
 export { OneCLIError, OneCLIRequestError } from "./errors.js";
 
 export type { OneCLIOptions } from "./types.js";
@@ -13,3 +14,8 @@ export type {
   CreateAgentResponse,
   EnsureAgentResponse,
 } from "./agents/types.js";
+export type {
+  ApprovalRequest,
+  ManualApprovalCallback,
+  ManualApprovalHandle,
+} from "./approvals/types.js";
