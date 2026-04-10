@@ -15,7 +15,7 @@ export interface ApprovalRequest {
   /** First ~4KB of request body as text, or null if no body. */
   bodyPreview: string | null;
   /** The agent that made this request. */
-  agent: { id: string; name: string };
+  agent: { id: string; name: string; externalId: string | null };
   /** When the request arrived (ISO 8601). */
   createdAt: string;
   /** When the approval expires (ISO 8601). */
