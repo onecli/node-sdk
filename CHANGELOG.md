@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/onecli/node-sdk/compare/v0.3.0...v0.3.1) (2026-04-10)
+
+
+### Bug Fixes
+
+* include agent identifier in approval metadata as externalId ([#19](https://github.com/onecli/node-sdk/issues/19)) ([f3ff938](https://github.com/onecli/node-sdk/commit/f3ff938e73f43a09274c693ebcd5c76e3009e511))
+
 ## [0.3.0](https://github.com/onecli/node-sdk/compare/v0.2.0...v0.3.0) (2026-04-09)
 
 
