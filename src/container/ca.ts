@@ -9,12 +9,17 @@ const SYSTEM_CA_PATHS = [
   "/etc/pki/tls/certs/ca-bundle.crt", // RHEL / CentOS / Fedora
 ];
 
+/** Per-user cache dir. XDG_RUNTIME_DIR is per-user on Linux; tmpdir() fallback covers macOS/Windows. */
+function caCacheDir(): string {
+  return process.env.XDG_RUNTIME_DIR ?? tmpdir();
+}
+
 /**
- * Write the proxy CA certificate PEM to a temp file on the host.
+ * Write the proxy CA certificate PEM to a per-user file on the host.
  * Returns the path to the written file.
  */
 export function writeCaCertificate(caCertificate: string): string {
-  const outPath = join(tmpdir(), "onecli-proxy-ca.pem");
+  const outPath = join(caCacheDir(), "onecli-proxy-ca.pem");
   writeFileSync(outPath, caCertificate);
   return outPath;
 }
@@ -28,7 +33,7 @@ export function buildCombinedCaBundle(caCertificate: string): string | null {
     try {
       const sysCa = readFileSync(sysPath, "utf8");
       const combined = sysCa.trimEnd() + "\n" + caCertificate.trimEnd() + "\n";
-      const outPath = join(tmpdir(), "onecli-combined-ca.pem");
+      const outPath = join(caCacheDir(), "onecli-combined-ca.pem");
       writeFileSync(outPath, combined);
       return outPath;
     } catch {
