@@ -133,11 +133,13 @@ export class ContainerClient {
       args.push("-e", `${key}=${value}`);
     }
 
-    // Write CA certificate to host temp file and mount into container
+    // Write CA certificate to host temp file and mount into container.
+    // `,z` is a shared SELinux relabel so the container can read the cert
+    // on enforcing systems (Fedora + podman). No-op on non-SELinux hosts.
     const hostCaPath = writeCaCertificate(config.caCertificate);
     args.push(
       "-v",
-      `${hostCaPath}:${config.caCertificateContainerPath}:ro`,
+      `${hostCaPath}:${config.caCertificateContainerPath}:ro,z`,
     );
 
     // Build combined CA bundle for system-wide trust (curl, Python, Go, etc.)
@@ -147,7 +149,7 @@ export class ContainerClient {
         args.push("-e", "SSL_CERT_FILE=/tmp/onecli-combined-ca.pem");
         // DENO_CERT: Deno does not respect SSL_CERT_FILE, it has its own env var
         args.push("-e", "DENO_CERT=/tmp/onecli-combined-ca.pem");
-        args.push("-v", `${combinedPath}:/tmp/onecli-combined-ca.pem:ro`);
+        args.push("-v", `${combinedPath}:/tmp/onecli-combined-ca.pem:ro,z`);
       }
     }
 
