@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/onecli/node-sdk/compare/v0.3.1...v0.4.0) (2026-05-05)
+
+
+### Features
+
+* add provisionUser method to SDK ([#23](https://github.com/onecli/node-sdk/issues/23)) ([fe0c09d](https://github.com/onecli/node-sdk/commit/fe0c09d01bea6e5731a031a29b4946a422f796c8))
+
 ## [0.3.1](https://github.com/onecli/node-sdk/compare/v0.3.0...v0.3.1) (2026-04-10)
 
 
