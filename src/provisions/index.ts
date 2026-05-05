@@ -24,7 +24,7 @@ export class ProvisionClient {
   provisionUser = async (
     input?: ProvisionUserInput,
   ): Promise<ProvisionUserResponse> => {
-    const url = `${this.baseUrl}/api/provisions`;
+    const url = `${this.baseUrl}/api/team/provisions`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
