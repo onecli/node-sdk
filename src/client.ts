@@ -1,6 +1,7 @@
 import { ContainerClient } from "./container/index.js";
 import { AgentsClient } from "./agents/index.js";
 import { ApprovalClient } from "./approvals/index.js";
+import { ProvisionClient } from "./provisions/index.js";
 import type { OneCLIOptions } from "./types.js";
 import type {
   ApplyContainerConfigOptions,
@@ -15,6 +16,10 @@ import type {
   ManualApprovalCallback,
   ManualApprovalHandle,
 } from "./approvals/types.js";
+import type {
+  ProvisionUserInput,
+  ProvisionUserResponse,
+} from "./provisions/types.js";
 
 const DEFAULT_URL = "https://app.onecli.sh";
 const DEFAULT_TIMEOUT = 5000;
@@ -23,6 +28,7 @@ export class OneCLI {
   private containerClient: ContainerClient;
   private agentsClient: AgentsClient;
   private approvalClient: ApprovalClient;
+  private provisionClient: ProvisionClient;
 
   constructor(options: OneCLIOptions = {}) {
     const apiKey = options.apiKey ?? process.env.ONECLI_API_KEY ?? "";
@@ -34,6 +40,7 @@ export class OneCLI {
     this.containerClient = new ContainerClient(url, apiKey, timeout);
     this.agentsClient = new AgentsClient(url, apiKey, timeout);
     this.approvalClient = new ApprovalClient(url, apiKey, gatewayUrl);
+    this.provisionClient = new ProvisionClient(url, apiKey, timeout);
   }
 
   /**
@@ -66,6 +73,17 @@ export class OneCLI {
    */
   ensureAgent = (input: CreateAgentInput): Promise<EnsureAgentResponse> => {
     return this.agentsClient.ensureAgent(input);
+  };
+
+  /**
+   * Provision a new user in your organization.
+   * Pre-creates a user account, project, and API key.
+   * Returns a claim URL and API key. Requires admin/owner role.
+   */
+  provisionUser = (
+    input?: ProvisionUserInput,
+  ): Promise<ProvisionUserResponse> => {
+    return this.provisionClient.provisionUser(input);
   };
 
   /**
