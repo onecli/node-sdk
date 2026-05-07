@@ -1,16 +1,26 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { readFileSync, existsSync } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
 import { writeCaCertificate, buildCombinedCaBundle } from "../../src/container/ca.js";
 
 const PROXY_CA = "-----BEGIN CERTIFICATE-----\nPROXY_CA_CONTENT\n-----END CERTIFICATE-----";
 
+const { isolatedTmp } = vi.hoisted(() => {
+  const { mkdtempSync } = require("fs");
+  const { tmpdir } = require("os");
+  const { join } = require("path");
+  return { isolatedTmp: mkdtempSync(join(tmpdir(), "ca-test-")) };
+});
+vi.mock("os", async (importOriginal) => {
+  const original = await importOriginal<typeof import("os")>();
+  return { ...original, tmpdir: () => isolatedTmp };
+});
+
 describe("writeCaCertificate", () => {
   it("writes PEM to tmpdir and returns path", () => {
     const path = writeCaCertificate(PROXY_CA);
 
-    expect(path).toBe(join(tmpdir(), "onecli-proxy-ca.pem"));
+    expect(path).toBe(join(isolatedTmp, "onecli-proxy-ca.pem"));
 
     const written = readFileSync(path, "utf8");
     expect(written).toBe(PROXY_CA);
@@ -20,7 +30,7 @@ describe("writeCaCertificate", () => {
     writeCaCertificate(PROXY_CA);
     writeCaCertificate(PROXY_CA);
 
-    const written = readFileSync(join(tmpdir(), "onecli-proxy-ca.pem"), "utf8");
+    const written = readFileSync(join(isolatedTmp, "onecli-proxy-ca.pem"), "utf8");
     expect(written).toBe(PROXY_CA);
   });
 });
@@ -38,7 +48,7 @@ describe("buildCombinedCaBundle", () => {
 
     const result = buildCombinedCaBundle(PROXY_CA);
 
-    expect(result).toBe(join(tmpdir(), "onecli-combined-ca.pem"));
+    expect(result).toBe(join(isolatedTmp, "onecli-combined-ca.pem"));
 
     const combined = readFileSync(result!, "utf8");
     expect(combined).toContain("PROXY_CA_CONTENT");
