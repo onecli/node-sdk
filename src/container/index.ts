@@ -84,6 +84,12 @@ export class ContainerClient {
       `${hostCaPath}:${config.caCertificateContainerPath}:ro`,
     );
 
+    // Node.js does not respect SSL_CERT_FILE; it merges NODE_EXTRA_CA_CERTS with its built-in CAs
+    args.push(
+      "-e",
+      `NODE_EXTRA_CA_CERTS=${config.caCertificateContainerPath}`,
+    );
+
     // Build combined CA bundle for system-wide trust (curl, Python, Go, etc.)
     if (combineCaBundle) {
       const combinedPath = buildCombinedCaBundle(config.caCertificate);
