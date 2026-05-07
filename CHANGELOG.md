@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/onecli/node-sdk/compare/v0.4.0...v0.5.0) (2026-05-07)
+
+
+### Features
+
+* add getGatewaySkill method to Node SDK ([#26](https://github.com/onecli/node-sdk/issues/26)) ([efa14af](https://github.com/onecli/node-sdk/commit/efa14afdd36711e1b73d86ba99efda89d16a4964))
+
 ## [0.4.0](https://github.com/onecli/node-sdk/compare/v0.3.1...v0.4.0) (2026-05-05)
 
 
