@@ -44,6 +44,13 @@ export class OneCLI {
   }
 
   /**
+   * Fetch the gateway skill markdown from OneCLI.
+   */
+  getGatewaySkill = (): Promise<string> => {
+    return this.containerClient.getGatewaySkill();
+  };
+
+  /**
    * Fetch the raw container configuration from OneCLI.
    */
   getContainerConfig = (agent?: string): Promise<ContainerConfig> => {

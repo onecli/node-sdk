@@ -14,6 +14,41 @@ export class ContainerClient {
   }
 
   /**
+   * Fetch the gateway skill markdown from OneCLI.
+   */
+  getGatewaySkill = async (): Promise<string> => {
+    const url = `${this.baseUrl}/api/skill/gateway`;
+    try {
+      const headers: Record<string, string> = {};
+      if (this.apiKey) {
+        headers["Authorization"] = `Bearer ${this.apiKey}`;
+      }
+
+      const res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(this.timeout),
+      });
+
+      if (!res.ok) {
+        throw new OneCLIRequestError(
+          `OneCLI returned ${res.status} ${res.statusText}`,
+          { url, statusCode: res.status },
+        );
+      }
+
+      return await res.text();
+    } catch (error) {
+      if (
+        error instanceof OneCLIError ||
+        error instanceof OneCLIRequestError
+      ) {
+        throw error;
+      }
+      throw toOneCLIError(error);
+    }
+  };
+
+  /**
    * Fetch the raw container configuration from OneCLI.
    */
   getContainerConfig = async (agent?: string): Promise<ContainerConfig> => {
