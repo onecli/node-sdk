@@ -1,10 +1,19 @@
+import type { RequestOptions } from "../request-options.js";
+
 export interface ContainerConfig {
   env: Record<string, string>;
   caCertificate: string;
   caCertificateContainerPath: string;
 }
 
-export interface ApplyContainerConfigOptions {
+export interface GetContainerConfigOptions extends RequestOptions {
+  /**
+   * Agent identifier to fetch config for. Uses the default agent if omitted.
+   */
+  agent?: string;
+}
+
+export interface ApplyContainerConfigOptions extends GetContainerConfigOptions {
   /**
    * Build a combined CA bundle (system CAs + OneCLI CA) for full system trust.
    * When enabled, tools like curl, Python, and Go will also trust OneCLI.
@@ -18,9 +27,4 @@ export interface ApplyContainerConfigOptions {
    * @default true
    */
   addHostMapping?: boolean;
-
-  /**
-   * Agent identifier to fetch config for. Uses the default agent if omitted.
-   */
-  agent?: string;
 }

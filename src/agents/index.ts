@@ -8,16 +8,38 @@ import type {
   CreateAgentResponse,
   EnsureAgentResponse,
 } from "./types.js";
+import type { RequestOptions } from "../request-options.js";
 
 export class AgentsClient {
   private baseUrl: string;
   private apiKey: string;
   private timeout: number;
+  private defaultProjectId: string | null;
 
-  constructor(baseUrl: string, apiKey: string, timeout: number) {
+  constructor(
+    baseUrl: string,
+    apiKey: string,
+    timeout: number,
+    defaultProjectId: string | null,
+  ) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.apiKey = apiKey;
     this.timeout = timeout;
+    this.defaultProjectId = defaultProjectId;
+  }
+
+  private buildHeaders(options?: RequestOptions): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    const projectId = options?.projectId ?? this.defaultProjectId;
+    if (projectId) {
+      headers["X-Project-Id"] = projectId;
+    }
+    return headers;
   }
 
   /**
@@ -25,20 +47,14 @@ export class AgentsClient {
    */
   createAgent = async (
     input: CreateAgentInput,
+    options?: RequestOptions,
   ): Promise<CreateAgentResponse> => {
     const url = `${this.baseUrl}/api/agents`;
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (this.apiKey) {
-      headers["Authorization"] = `Bearer ${this.apiKey}`;
-    }
 
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers,
+        headers: this.buildHeaders(options),
         body: JSON.stringify(input),
         signal: AbortSignal.timeout(this.timeout),
       });
@@ -68,9 +84,10 @@ export class AgentsClient {
    */
   ensureAgent = async (
     input: CreateAgentInput,
+    options?: RequestOptions,
   ): Promise<EnsureAgentResponse> => {
     try {
-      await this.createAgent(input);
+      await this.createAgent(input, options);
       return { name: input.name, identifier: input.identifier, created: true };
     } catch (error) {
       if (error instanceof OneCLIRequestError && error.statusCode === 409) {

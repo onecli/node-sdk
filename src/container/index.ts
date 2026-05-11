@@ -1,31 +1,50 @@
 import { OneCLIError, OneCLIRequestError, toOneCLIError } from "../errors.js";
 import { writeCaCertificate, buildCombinedCaBundle } from "./ca.js";
-import type { ApplyContainerConfigOptions, ContainerConfig } from "./types.js";
+import type {
+  ApplyContainerConfigOptions,
+  ContainerConfig,
+  GetContainerConfigOptions,
+} from "./types.js";
+import type { RequestOptions } from "../request-options.js";
 
 export class ContainerClient {
   private baseUrl: string;
   private apiKey: string;
   private timeout: number;
+  private defaultProjectId: string | null;
 
-  constructor(baseUrl: string, apiKey: string, timeout: number) {
+  constructor(
+    baseUrl: string,
+    apiKey: string,
+    timeout: number,
+    defaultProjectId: string | null,
+  ) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.apiKey = apiKey;
     this.timeout = timeout;
+    this.defaultProjectId = defaultProjectId;
+  }
+
+  private buildHeaders(options?: RequestOptions): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (this.apiKey) {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+    }
+    const projectId = options?.projectId ?? this.defaultProjectId;
+    if (projectId) {
+      headers["X-Project-Id"] = projectId;
+    }
+    return headers;
   }
 
   /**
    * Fetch the gateway skill markdown from OneCLI.
    */
-  getGatewaySkill = async (): Promise<string> => {
+  getGatewaySkill = async (options?: RequestOptions): Promise<string> => {
     const url = `${this.baseUrl}/api/skill/gateway`;
     try {
-      const headers: Record<string, string> = {};
-      if (this.apiKey) {
-        headers["Authorization"] = `Bearer ${this.apiKey}`;
-      }
-
       const res = await fetch(url, {
-        headers,
+        headers: this.buildHeaders(options),
         signal: AbortSignal.timeout(this.timeout),
       });
 
@@ -51,19 +70,17 @@ export class ContainerClient {
   /**
    * Fetch the raw container configuration from OneCLI.
    */
-  getContainerConfig = async (agent?: string): Promise<ContainerConfig> => {
+  getContainerConfig = async (
+    options?: GetContainerConfigOptions,
+  ): Promise<ContainerConfig> => {
+    const { agent, ...requestOptions } = options ?? {};
     const url = agent
       ? `${this.baseUrl}/api/container-config?agent=${encodeURIComponent(agent)}`
       : `${this.baseUrl}/api/container-config`;
 
     try {
-      const headers: Record<string, string> = {};
-      if (this.apiKey) {
-        headers["Authorization"] = `Bearer ${this.apiKey}`;
-      }
-
       const res = await fetch(url, {
-        headers,
+        headers: this.buildHeaders(requestOptions),
         signal: AbortSignal.timeout(this.timeout),
       });
 
@@ -97,12 +114,16 @@ export class ContainerClient {
     args: string[],
     options?: ApplyContainerConfigOptions,
   ): Promise<boolean> => {
-    const { combineCaBundle = true, addHostMapping = true, agent } =
-      options ?? {};
+    const {
+      combineCaBundle = true,
+      addHostMapping = true,
+      agent,
+      projectId,
+    } = options ?? {};
 
     let config: ContainerConfig;
     try {
-      config = await this.getContainerConfig(agent);
+      config = await this.getContainerConfig({ agent, projectId });
     } catch {
       return false;
     }
