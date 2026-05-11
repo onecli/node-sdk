@@ -3,9 +3,11 @@ import { AgentsClient } from "./agents/index.js";
 import { ApprovalClient } from "./approvals/index.js";
 import { ProvisionClient } from "./provisions/index.js";
 import type { OneCLIOptions } from "./types.js";
+import type { RequestOptions } from "./request-options.js";
 import type {
   ApplyContainerConfigOptions,
   ContainerConfig,
+  GetContainerConfigOptions,
 } from "./container/types.js";
 import type {
   CreateAgentInput,
@@ -17,8 +19,8 @@ import type {
   ManualApprovalHandle,
 } from "./approvals/types.js";
 import type {
-  ProvisionUserInput,
-  ProvisionUserResponse,
+  ProvisionProjectInput,
+  ProvisionProjectResponse,
 } from "./provisions/types.js";
 
 const DEFAULT_URL = "https://app.onecli.sh";
@@ -36,25 +38,44 @@ export class OneCLI {
     const timeout = options.timeout ?? DEFAULT_TIMEOUT;
     const gatewayUrl =
       options.gatewayUrl ?? process.env.ONECLI_GATEWAY_URL ?? null;
+    const projectId =
+      options.projectId ?? process.env.ONECLI_PROJECT_ID ?? null;
 
-    this.containerClient = new ContainerClient(url, apiKey, timeout);
-    this.agentsClient = new AgentsClient(url, apiKey, timeout);
-    this.approvalClient = new ApprovalClient(url, apiKey, gatewayUrl);
-    this.provisionClient = new ProvisionClient(url, apiKey, timeout);
+    this.containerClient = new ContainerClient(
+      url,
+      apiKey,
+      timeout,
+      projectId,
+    );
+    this.agentsClient = new AgentsClient(url, apiKey, timeout, projectId);
+    this.approvalClient = new ApprovalClient(
+      url,
+      apiKey,
+      gatewayUrl,
+      projectId,
+    );
+    this.provisionClient = new ProvisionClient(
+      url,
+      apiKey,
+      timeout,
+      projectId,
+    );
   }
 
   /**
    * Fetch the gateway skill markdown from OneCLI.
    */
-  getGatewaySkill = (): Promise<string> => {
-    return this.containerClient.getGatewaySkill();
+  getGatewaySkill = (options?: RequestOptions): Promise<string> => {
+    return this.containerClient.getGatewaySkill(options);
   };
 
   /**
    * Fetch the raw container configuration from OneCLI.
    */
-  getContainerConfig = (agent?: string): Promise<ContainerConfig> => {
-    return this.containerClient.getContainerConfig(agent);
+  getContainerConfig = (
+    options?: GetContainerConfigOptions,
+  ): Promise<ContainerConfig> => {
+    return this.containerClient.getContainerConfig(options);
   };
 
   /**
@@ -71,26 +92,33 @@ export class OneCLI {
   /**
    * Create a new agent.
    */
-  createAgent = (input: CreateAgentInput): Promise<CreateAgentResponse> => {
-    return this.agentsClient.createAgent(input);
+  createAgent = (
+    input: CreateAgentInput,
+    options?: RequestOptions,
+  ): Promise<CreateAgentResponse> => {
+    return this.agentsClient.createAgent(input, options);
   };
 
   /**
    * Ensure an agent exists. Creates it if missing, returns normally if it already exists.
    */
-  ensureAgent = (input: CreateAgentInput): Promise<EnsureAgentResponse> => {
-    return this.agentsClient.ensureAgent(input);
+  ensureAgent = (
+    input: CreateAgentInput,
+    options?: RequestOptions,
+  ): Promise<EnsureAgentResponse> => {
+    return this.agentsClient.ensureAgent(input, options);
   };
 
   /**
-   * Provision a new user in your organization.
+   * Provision a new project in your organization.
    * Pre-creates a user account, project, and API key.
    * Returns a claim URL and API key. Requires admin/owner role.
    */
-  provisionUser = (
-    input?: ProvisionUserInput,
-  ): Promise<ProvisionUserResponse> => {
-    return this.provisionClient.provisionUser(input);
+  provisionProject = (
+    input?: ProvisionProjectInput,
+    options?: RequestOptions,
+  ): Promise<ProvisionProjectResponse> => {
+    return this.provisionClient.provisionProject(input, options);
   };
 
   /**
@@ -101,8 +129,9 @@ export class OneCLI {
    */
   configureManualApproval = (
     callback: ManualApprovalCallback,
+    options?: RequestOptions,
   ): ManualApprovalHandle => {
-    this.approvalClient.start(callback).catch(() => {
+    this.approvalClient.start(callback, options).catch(() => {
       // Errors handled internally with backoff
     });
     return { stop: () => this.approvalClient.stop() };

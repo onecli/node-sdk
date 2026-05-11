@@ -1,4 +1,4 @@
-export interface ProvisionUserInput {
+export interface ProvisionProjectInput {
   /** Role for the provisioned user. Defaults to "member". */
   role?: "admin" | "member";
 
@@ -6,7 +6,7 @@ export interface ProvisionUserInput {
   skipOnboarding?: boolean;
 }
 
-export interface ProvisionUserResponse {
+export interface ProvisionProjectResponse {
   /** Provision record ID. */
   id: string;
 

@@ -6,8 +6,10 @@ export { ProvisionClient } from "./provisions/index.js";
 export { OneCLIError, OneCLIRequestError } from "./errors.js";
 
 export type { OneCLIOptions } from "./types.js";
+export type { RequestOptions } from "./request-options.js";
 export type {
   ContainerConfig,
+  GetContainerConfigOptions,
   ApplyContainerConfigOptions,
 } from "./container/types.js";
 export type {
@@ -21,6 +23,6 @@ export type {
   ManualApprovalHandle,
 } from "./approvals/types.js";
 export type {
-  ProvisionUserInput,
-  ProvisionUserResponse,
+  ProvisionProjectInput,
+  ProvisionProjectResponse,
 } from "./provisions/types.js";

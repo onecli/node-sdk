@@ -1,6 +1,7 @@
 export interface OneCLIOptions {
   /**
-   * User API key from the OneCLI dashboard (starts with `oc_`).
+   * API key from the OneCLI dashboard.
+   * Supports both project keys (`oc_...`) and org keys (`oc_org_...`).
    * Falls back to `ONECLI_API_KEY` env var if not provided.
    */
   apiKey?: string;
@@ -23,4 +24,11 @@ export interface OneCLIOptions {
    * from the web app via `GET /api/gateway-url`.
    */
   gatewayUrl?: string;
+
+  /**
+   * Default project ID for org-level API keys (`oc_org_...`).
+   * Falls back to `ONECLI_PROJECT_ID` env var.
+   * Can be overridden per-operation via `RequestOptions`.
+   */
+  projectId?: string;
 }
