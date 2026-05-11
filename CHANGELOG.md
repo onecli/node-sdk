@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.0](https://github.com/onecli/node-sdk/compare/v0.5.0...v1.0.0) (2026-05-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* add org API key support and rename provisionUser to provisionProject ([#30](https://github.com/onecli/node-sdk/issues/30))
+
+### Features
+
+* add org API key support and rename provisionUser to provisionProject ([#30](https://github.com/onecli/node-sdk/issues/30)) ([ff5825b](https://github.com/onecli/node-sdk/commit/ff5825bb48df91099cb9f0bb014e9fcd6c7690fd))
+
+
+### Bug Fixes
+
+* isolate CA tests by mocking tmpdir with a unique temp directory ([#28](https://github.com/onecli/node-sdk/issues/28)) ([26fa588](https://github.com/onecli/node-sdk/commit/26fa588882e69edbb546ad81524d32796cf26788))
+
 ## [0.5.0](https://github.com/onecli/node-sdk/compare/v0.4.0...v0.5.0) (2026-05-07)
 
 
