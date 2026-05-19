@@ -41,7 +41,7 @@ export class ContainerClient {
    * Fetch the gateway skill markdown from OneCLI.
    */
   getGatewaySkill = async (options?: RequestOptions): Promise<string> => {
-    const url = `${this.baseUrl}/api/skill/gateway`;
+    const url = `${this.baseUrl}/v1/skill/gateway`;
     try {
       const res = await fetch(url, {
         headers: this.buildHeaders(options),
@@ -75,8 +75,8 @@ export class ContainerClient {
   ): Promise<ContainerConfig> => {
     const { agent, ...requestOptions } = options ?? {};
     const url = agent
-      ? `${this.baseUrl}/api/container-config?agent=${encodeURIComponent(agent)}`
-      : `${this.baseUrl}/api/container-config`;
+      ? `${this.baseUrl}/v1/container-config?agent=${encodeURIComponent(agent)}`
+      : `${this.baseUrl}/v1/container-config`;
 
     try {
       const res = await fetch(url, {

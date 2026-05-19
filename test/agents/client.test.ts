@@ -30,7 +30,7 @@ describe("AgentsClient", () => {
       client.createAgent({ name: "Test", identifier: "test" });
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://localhost:3000/api/agents",
+        "http://localhost:3000/v1/agents",
         expect.any(Object),
       );
     });
@@ -50,7 +50,7 @@ describe("AgentsClient", () => {
       await client.createAgent({ name: "My Agent", identifier: "my-agent" });
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://localhost:3000/api/agents",
+        "http://localhost:3000/v1/agents",
         expect.objectContaining({
           method: "POST",
           headers: {
@@ -118,7 +118,7 @@ describe("AgentsClient", () => {
         client.createAgent({ name: "Test", identifier: "test" }),
       ).rejects.toMatchObject({
         statusCode: 401,
-        url: "http://localhost:3000/api/agents",
+        url: "http://localhost:3000/v1/agents",
       });
     });
 

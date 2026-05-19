@@ -8,7 +8,7 @@ export interface OneCLIOptions {
 
   /**
    * Base URL of the OneCLI instance.
-   * Falls back to `ONECLI_URL` env var, then `https://app.onecli.sh`.
+   * Falls back to `ONECLI_URL` env var, then `https://api.onecli.sh`.
    */
   url?: string;
 
@@ -21,7 +21,7 @@ export interface OneCLIOptions {
   /**
    * Gateway URL for manual approval polling.
    * Falls back to `ONECLI_GATEWAY_URL` env var, then auto-resolved
-   * from the web app via `GET /api/gateway-url`.
+   * from the web app via `GET /v1/gateway-url`.
    */
   gatewayUrl?: string;
 

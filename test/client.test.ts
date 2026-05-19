@@ -115,7 +115,7 @@ describe("OneCLI", () => {
       oc.getContainerConfig();
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://options-url:3000/api/container-config",
+        "http://options-url:3000/v1/container-config",
         expect.any(Object),
       );
 

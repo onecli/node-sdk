@@ -37,7 +37,7 @@ describe("ContainerClient", () => {
       client.getContainerConfig();
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://localhost:3000/api/container-config",
+        "http://localhost:3000/v1/container-config",
         expect.any(Object),
       );
     });
@@ -57,7 +57,7 @@ describe("ContainerClient", () => {
       await client.getContainerConfig();
 
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://localhost:3000/api/container-config",
+        "http://localhost:3000/v1/container-config",
         expect.objectContaining({
           headers: { Authorization: "Bearer oc_mykey" },
         }),
@@ -118,7 +118,7 @@ describe("ContainerClient", () => {
       );
       await expect(client.getContainerConfig()).rejects.toMatchObject({
         statusCode: 401,
-        url: "http://localhost:3000/api/container-config",
+        url: "http://localhost:3000/v1/container-config",
       });
     });
 

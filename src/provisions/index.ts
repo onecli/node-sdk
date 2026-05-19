@@ -47,7 +47,7 @@ export class ProvisionClient {
     input?: ProvisionProjectInput,
     options?: RequestOptions,
   ): Promise<ProvisionProjectResponse> => {
-    const url = `${this.baseUrl}/api/team/provisions`;
+    const url = `${this.baseUrl}/v1/team/provisions`;
 
     try {
       const res = await fetch(url, {

@@ -55,7 +55,7 @@ export class ApprovalClient {
   ): Promise<string> {
     if (this.gatewayUrl) return this.gatewayUrl;
 
-    const url = `${this.baseUrl}/api/gateway-url`;
+    const url = `${this.baseUrl}/v1/gateway-url`;
     const res = await fetch(url, {
       headers: this.buildAuthHeaders(projectId),
       signal: AbortSignal.timeout(5000),
@@ -147,7 +147,7 @@ export class ApprovalClient {
   ): Promise<PollResponse> {
     this.abortController = new AbortController();
 
-    let url = `${gatewayUrl}/api/approvals/pending`;
+    let url = `${gatewayUrl}/v1/approvals/pending`;
     if (this.inFlight.size > 0) {
       const exclude = [...this.inFlight].join(",");
       url += `?exclude=${encodeURIComponent(exclude)}`;
@@ -177,7 +177,7 @@ export class ApprovalClient {
     decision: string,
     projectId?: string | null,
   ): Promise<void> {
-    const url = `${gatewayUrl}/api/approvals/${encodeURIComponent(id)}/decision`;
+    const url = `${gatewayUrl}/v1/approvals/${encodeURIComponent(id)}/decision`;
 
     const headers = this.buildAuthHeaders(projectId);
     headers["Content-Type"] = "application/json";

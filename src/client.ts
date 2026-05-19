@@ -23,7 +23,7 @@ import type {
   ProvisionProjectResponse,
 } from "./provisions/types.js";
 
-const DEFAULT_URL = "https://app.onecli.sh";
+const DEFAULT_URL = "https://api.onecli.sh";
 const DEFAULT_TIMEOUT = 5000;
 
 export class OneCLI {

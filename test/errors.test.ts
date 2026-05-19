@@ -13,14 +13,14 @@ describe("OneCLIError", () => {
 describe("OneCLIRequestError", () => {
   it("sets name, url, statusCode, and formatted message", () => {
     const err = new OneCLIRequestError("Not Found", {
-      url: "http://localhost:3000/api/container-config",
+      url: "http://localhost:3000/v1/container-config",
       statusCode: 404,
     });
     expect(err.name).toBe("OneCLIRequestError");
-    expect(err.url).toBe("http://localhost:3000/api/container-config");
+    expect(err.url).toBe("http://localhost:3000/v1/container-config");
     expect(err.statusCode).toBe(404);
     expect(err.message).toBe(
-      "[URL=http://localhost:3000/api/container-config] [StatusCode=404] Not Found",
+      "[URL=http://localhost:3000/v1/container-config] [StatusCode=404] Not Found",
     );
     expect(err).toBeInstanceOf(Error);
   });

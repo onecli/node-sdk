@@ -59,7 +59,7 @@ import { OneCLI } from "@onecli-sh/sdk";
 
 const onecli = new OneCLI({
   apiKey: "oc_...",                    // optional: falls back to ONECLI_API_KEY env var
-  url: "http://localhost:3000",        // optional: falls back to ONECLI_URL env var, then https://app.onecli.sh
+  url: "http://localhost:3000",        // optional: falls back to ONECLI_URL env var, then https://api.onecli.sh
 });
 
 // Get raw container configuration
@@ -77,7 +77,7 @@ const active = await onecli.applyContainerConfig(args);
 | Variable         | Description                                              |
 | ---------------- | -------------------------------------------------------- |
 | `ONECLI_API_KEY` | User API key (`oc_...`). Used when `apiKey` is not passed to constructor. |
-| `ONECLI_URL`     | Base URL of OneCLI instance. Defaults to `https://app.onecli.sh`. |
+| `ONECLI_URL`     | Base URL of OneCLI instance. Defaults to `https://api.onecli.sh`. |
 
 ## API Reference
 
@@ -92,7 +92,7 @@ new OneCLI(options?: OneCLIOptions)
 | Option    | Type     | Required | Default                             | Description                     |
 | --------- | -------- | -------- | ----------------------------------- | ------------------------------- |
 | `apiKey`  | `string` | No       | `ONECLI_API_KEY` env var            | User API key (`oc_...`)         |
-| `url`     | `string` | No       | `ONECLI_URL` or `https://app.onecli.sh` | Base URL of the OneCLI instance |
+| `url`     | `string` | No       | `ONECLI_URL` or `https://api.onecli.sh` | Base URL of the OneCLI instance |
 | `timeout` | `number` | No       | `5000`                              | Request timeout in milliseconds |
 
 #### `onecli.getContainerConfig()`
@@ -123,7 +123,7 @@ const active = await onecli.applyContainerConfig(args, {
 | `addHostMapping` | `boolean` | `true`  | Add `host.docker.internal` mapping on Linux     |
 
 **What it does:**
-1. Fetches `/api/container-config` with `Authorization: Bearer {apiKey}`
+1. Fetches `/v1/container-config` with `Authorization: Bearer {apiKey}`
 2. Pushes `-e KEY=VALUE` for each server-controlled environment variable
 3. Writes CA certificate to a temp file and mounts it into the container
 4. Builds a combined CA bundle (system CAs + OneCLI CA) so curl, Python, Go, etc. also trust OneCLI

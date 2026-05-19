@@ -49,7 +49,7 @@ export class AgentsClient {
     input: CreateAgentInput,
     options?: RequestOptions,
   ): Promise<CreateAgentResponse> => {
-    const url = `${this.baseUrl}/api/agents`;
+    const url = `${this.baseUrl}/v1/agents`;
 
     try {
       const res = await fetch(url, {
