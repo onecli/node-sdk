@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/onecli/node-sdk/compare/v1.0.0...v2.0.0) (2026-05-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* migrate API prefix from /api to /v1 and default to api.onecli.sh ([#31](https://github.com/onecli/node-sdk/issues/31))
+
+### Features
+
+* migrate API prefix from /api to /v1 and default to api.onecli.sh ([#31](https://github.com/onecli/node-sdk/issues/31)) ([34184c3](https://github.com/onecli/node-sdk/commit/34184c357b584627bd3cf70c6e23a50a7363453c))
+
 ## [1.0.0](https://github.com/onecli/node-sdk/compare/v0.5.0...v1.0.0) (2026-05-11)
 
 
