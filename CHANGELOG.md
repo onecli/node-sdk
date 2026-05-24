@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.0](https://github.com/onecli/node-sdk/compare/v2.0.0...v2.1.0) (2026-05-24)
+
+
+### Features
+
+* add parentIdentifier to CreateAgentInput ([#35](https://github.com/onecli/node-sdk/issues/35)) ([02252dd](https://github.com/onecli/node-sdk/commit/02252dd23ae08558f3759568dc88a4541109c277))
+
+
+### Bug Fixes
+
+* align README with SDK docs ([#33](https://github.com/onecli/node-sdk/issues/33)) ([0a22421](https://github.com/onecli/node-sdk/commit/0a224210b1bad3daa3f6a8520b7dc793acc281b3))
+
 ## [2.0.0](https://github.com/onecli/node-sdk/compare/v1.0.0...v2.0.0) (2026-05-19)
 
 
