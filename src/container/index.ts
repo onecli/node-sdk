@@ -1,9 +1,6 @@
 import { OneCLIError, OneCLIRequestError, toOneCLIError } from "../errors.js";
-import {
-  writeCaCertificate,
-  buildCombinedCaBundle,
-  writeCredentialStub,
-} from "./ca.js";
+import { writeCaCertificate, buildCombinedCaBundle } from "./ca.js";
+import { writeCredentialStub } from "./credentials.js";
 import type {
   ApplyContainerConfigOptions,
   ContainerConfig,
