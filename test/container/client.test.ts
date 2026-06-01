@@ -16,6 +16,16 @@ const MOCK_CONFIG = {
   caCertificateContainerPath: "/tmp/onecli-proxy-ca.pem",
 };
 
+const MOCK_CONFIG_WITH_STUBS = {
+  ...MOCK_CONFIG,
+  credentialStubs: [
+    {
+      containerPath: "/tmp/onecli-codex/auth.json",
+      content: '{"auth_mode":"chatgpt","tokens":{"access_token":"onecli-managed"}}',
+    },
+  ],
+};
+
 describe("ContainerClient", () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>;
 
@@ -413,6 +423,49 @@ describe("ContainerClient", () => {
       ]);
       // New args appended
       expect(args.length).toBeGreaterThan(originalLength);
+    });
+
+    it("writes credential stubs and pushes -v mounts", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(MOCK_CONFIG_WITH_STUBS)),
+      );
+
+      const client = new ContainerClient(
+        "http://localhost:3000",
+        "oc_test",
+        5000,
+      );
+      const args: string[] = [];
+      await client.applyContainerConfig(args, {
+        combineCaBundle: false,
+        addHostMapping: false,
+      });
+
+      const stubMount = args.find(
+        (a) => a.includes("onecli-stub-auth.json") && a.endsWith(":ro"),
+      );
+      expect(stubMount).toBeDefined();
+      expect(stubMount).toContain(":/tmp/onecli-codex/auth.json:ro");
+    });
+
+    it("skips credential stubs when not present in config", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify(MOCK_CONFIG)),
+      );
+
+      const client = new ContainerClient(
+        "http://localhost:3000",
+        "oc_test",
+        5000,
+      );
+      const args: string[] = [];
+      await client.applyContainerConfig(args, {
+        combineCaBundle: false,
+        addHostMapping: false,
+      });
+
+      const stubMount = args.find((a) => a.includes("onecli-stub-"));
+      expect(stubMount).toBeUndefined();
     });
 
     it("adds --add-host on Linux", async () => {

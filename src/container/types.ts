@@ -1,9 +1,15 @@
 import type { RequestOptions } from "../request-options.js";
 
+export interface CredentialStub {
+  containerPath: string;
+  content: string;
+}
+
 export interface ContainerConfig {
   env: Record<string, string>;
   caCertificate: string;
   caCertificateContainerPath: string;
+  credentialStubs?: CredentialStub[];
 }
 
 export interface GetContainerConfigOptions extends RequestOptions {

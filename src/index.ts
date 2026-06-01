@@ -9,6 +9,7 @@ export type { OneCLIOptions } from "./types.js";
 export type { RequestOptions } from "./request-options.js";
 export type {
   ContainerConfig,
+  CredentialStub,
   GetContainerConfigOptions,
   ApplyContainerConfigOptions,
 } from "./container/types.js";
