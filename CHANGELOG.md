@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/onecli/node-sdk/compare/v2.1.0...v2.2.0) (2026-06-02)
+
+
+### Features
+
+* support credential stubs in container config ([#36](https://github.com/onecli/node-sdk/issues/36)) ([3087ebd](https://github.com/onecli/node-sdk/commit/3087ebd43428505f4d12b7b4c048a7e646f6d21c))
+
 ## [2.1.0](https://github.com/onecli/node-sdk/compare/v2.0.0...v2.1.0) (2026-05-24)
 
 
