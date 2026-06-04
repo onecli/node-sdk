@@ -2,7 +2,7 @@ export interface CreateAgentInput {
   /** Display name for the agent. */
   name: string;
 
-  /** Unique identifier (lowercase letters, numbers, hyphens, starts with a letter). */
+  /** Unique identifier: 1-50 chars, lowercase letters, numbers, and hyphens, starting with a letter or number. */
   identifier: string;
 
   /** Identifier of the parent agent. Child inherits parent's secretMode and credential assignments. */

@@ -340,7 +340,7 @@ describe("ContainerClient", () => {
       expect(args).toEqual([]); // args should not be mutated on failure
     });
 
-    it("returns false on 401 (bad API key)", async () => {
+    it("throws OneCLIRequestError on 401 (bad API key)", async () => {
       fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
@@ -353,9 +353,36 @@ describe("ContainerClient", () => {
         "oc_invalid",
         5000,
       );
-      const result = await client.applyContainerConfig([]);
 
-      expect(result).toBe(false);
+      await expect(client.applyContainerConfig([])).rejects.toThrow(
+        OneCLIRequestError,
+      );
+    });
+
+    it("throws OneCLIRequestError on 404 (unknown agent identifier)", async () => {
+      fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error:
+              'No agent with identifier "7f3a-unknown" exists in this project.',
+            code: "AGENT_NOT_FOUND",
+            agentIdentifier: "7f3a-unknown",
+          }),
+          { status: 404, statusText: "Not Found" },
+        ),
+      );
+
+      const client = new ContainerClient(
+        "http://localhost:3000",
+        "oc_test",
+        5000,
+      );
+      const args: string[] = [];
+
+      await expect(
+        client.applyContainerConfig(args, { agent: "7f3a-unknown" }),
+      ).rejects.toThrow(OneCLIRequestError);
+      expect(args).toEqual([]); // unknown agent must not be silently swallowed
     });
 
     it("returns false on 503 (CA not available)", async () => {
@@ -391,7 +418,9 @@ describe("ContainerClient", () => {
       );
       const args = ["run", "-i", "--rm"];
       const argsBefore = [...args];
-      await client.applyContainerConfig(args);
+      await expect(client.applyContainerConfig(args)).rejects.toThrow(
+        OneCLIRequestError,
+      );
 
       expect(args).toEqual(argsBefore);
     });
