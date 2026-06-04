@@ -80,7 +80,10 @@ export class OneCLI {
 
   /**
    * Fetch config and apply `-e` / `-v` flags to a Docker `run` argument array.
-   * Returns `true` on success, `false` on failure (graceful degradation).
+   * Returns `true` on success, or `false` if OneCLI is unreachable or
+   * unhealthy (network error or 5xx). Throws `OneCLIRequestError` on a 4xx
+   * response (e.g. unknown agent identifier or invalid API key) -- handle it
+   * rather than launching an uncredentialed container.
    */
   applyContainerConfig = (
     args: string[],

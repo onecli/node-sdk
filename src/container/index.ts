@@ -108,8 +108,14 @@ export class ContainerClient {
    * Fetch the container config from OneCLI and push the corresponding
    * `-e` and `-v` flags onto the Docker `run` argument array.
    *
-   * Returns `true` if OneCLI was reachable and config was applied,
-   * `false` otherwise (graceful degradation).
+   * Returns `true` once config is applied. Returns `false` only when OneCLI
+   * is unreachable or unhealthy (network error or 5xx) -- a transient outage
+   * shouldn't block container launches.
+   *
+   * Throws `OneCLIRequestError` on a 4xx response (e.g. the agent identifier
+   * isn't registered, or the API key is invalid). Those are caller
+   * misconfigurations: degrading silently would launch the container without
+   * credentials and leave it hanging. Handle the error -- don't swallow it.
    */
   applyContainerConfig = async (
     args: string[],
@@ -125,7 +131,19 @@ export class ContainerClient {
     let config: ContainerConfig;
     try {
       config = await this.getContainerConfig({ agent, projectId });
-    } catch {
+    } catch (error) {
+      // Fail loud on caller/config errors (4xx): a missing agent, invalid API
+      // key, or forbidden project means the container would otherwise launch
+      // WITHOUT credentials and silently hang. Surface it so it's traceable.
+      if (
+        error instanceof OneCLIRequestError &&
+        error.statusCode >= 400 &&
+        error.statusCode < 500
+      ) {
+        throw error;
+      }
+      // Graceful degradation only when OneCLI is unreachable or unhealthy
+      // (network error or 5xx) -- don't block launches on a transient outage.
       return false;
     }
 

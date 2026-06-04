@@ -163,7 +163,7 @@ const config = await onecli.getContainerConfig({ projectId: "proj-123" });
 
 #### `onecli.applyContainerConfig(args, options?)`
 
-Fetch config and push Docker flags onto the `args` array. Returns `true` on success, `false` if OneCLI was unreachable (graceful degradation).
+Fetch config and push Docker flags onto the `args` array. Returns `true` on success, or `false` if OneCLI is unreachable or unhealthy (network error or 5xx). Throws `OneCLIRequestError` on a 4xx response (e.g. an unknown agent identifier or invalid API key) — a real misconfiguration you should handle rather than launch an uncredentialed container.
 
 ```typescript
 const args = ["run", "-i", "--rm", "my-image"];
@@ -187,7 +187,7 @@ const active = await onecli.applyContainerConfig(args, {
 4. Builds a combined CA bundle (system CAs + OneCLI CA) so all tools trust OneCLI
 5. Adds `--add-host host.docker.internal:host-gateway` on Linux
 
-If OneCLI is unreachable, returns `false` without mutating the args array.
+If OneCLI is unreachable or unhealthy (network error or 5xx), returns `false` without mutating the args array. A 4xx response (e.g. the agent identifier isn't registered) throws `OneCLIRequestError` instead of failing silently.
 
 ---
 
@@ -211,7 +211,7 @@ console.log(agent.createdAt);  // ISO 8601 timestamp
 | Input        | Type     | Description                                                                  |
 | ------------ | -------- | ---------------------------------------------------------------------------- |
 | `name`       | `string` | Display name for the agent                                                   |
-| `identifier` | `string` | Unique identifier (lowercase letters, numbers, hyphens, starts with a letter) |
+| `identifier` | `string` | Unique identifier (1-50 chars; lowercase letters, numbers, hyphens; starts with a letter or number) |
 
 **Returns** `{ id, name, identifier, createdAt }`
 
