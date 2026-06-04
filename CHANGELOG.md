@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/onecli/node-sdk/compare/v2.2.0...v2.2.1) (2026-06-04)
+
+
+### Bug Fixes
+
+* throw on 4xx in applyContainerConfig instead of failing silently ([#38](https://github.com/onecli/node-sdk/issues/38)) ([564b49f](https://github.com/onecli/node-sdk/commit/564b49f585ae3d4a7c2bf1cd8002d33be4a7f085))
+
 ## [2.2.0](https://github.com/onecli/node-sdk/compare/v2.1.0...v2.2.0) (2026-06-02)
 
 
