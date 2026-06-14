@@ -16,6 +16,15 @@ export interface CreateAgentResponse {
   createdAt: string;
 }
 
+export interface Agent {
+  id: string;
+  name: string;
+  identifier: string;
+  /** Whether this is the project's default agent. */
+  isDefault: boolean;
+  createdAt: string;
+}
+
 export interface EnsureAgentResponse {
   name: string;
   identifier: string;

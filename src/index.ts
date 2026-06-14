@@ -14,6 +14,7 @@ export type {
   ApplyContainerConfigOptions,
 } from "./container/types.js";
 export type {
+  Agent,
   CreateAgentInput,
   CreateAgentResponse,
   EnsureAgentResponse,

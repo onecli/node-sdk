@@ -215,6 +215,20 @@ console.log(agent.createdAt);  // ISO 8601 timestamp
 
 **Returns** `{ id, name, identifier, createdAt }`
 
+#### `onecli.listAgents(options?)`
+
+List all agents in the project.
+
+```typescript
+const agents = await onecli.listAgents();
+
+for (const agent of agents) {
+  console.log(agent.identifier, agent.isDefault);
+}
+```
+
+**Returns** `Array<{ id, name, identifier, isDefault, createdAt }>`
+
 #### `onecli.ensureAgent(input, options?)`
 
 Ensure an agent exists. Creates it if missing, returns normally if it already exists.
@@ -227,6 +241,8 @@ const result = await onecli.ensureAgent({
 
 console.log(result.created); // true if newly created, false if already existed
 ```
+
+Idempotent even at the agent cap: if the project is at its plan's agent limit but the target identifier already exists, the call still resolves with `created: false` instead of throwing a quota error.
 
 **Returns** `{ name, identifier, created }`
 

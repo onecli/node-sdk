@@ -10,6 +10,7 @@ import type {
   GetContainerConfigOptions,
 } from "./container/types.js";
 import type {
+  Agent,
   CreateAgentInput,
   CreateAgentResponse,
   EnsureAgentResponse,
@@ -90,6 +91,13 @@ export class OneCLI {
     options?: ApplyContainerConfigOptions,
   ): Promise<boolean> => {
     return this.containerClient.applyContainerConfig(args, options);
+  };
+
+  /**
+   * List all agents in the project.
+   */
+  listAgents = (options?: RequestOptions): Promise<Agent[]> => {
+    return this.agentsClient.listAgents(options);
   };
 
   /**
