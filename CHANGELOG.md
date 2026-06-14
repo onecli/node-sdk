@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/onecli/node-sdk/compare/v2.2.1...v2.3.0) (2026-06-14)
+
+
+### Features
+
+* add listAgents and make ensureAgent idempotent at the agent cap ([#41](https://github.com/onecli/node-sdk/issues/41)) ([74dbae8](https://github.com/onecli/node-sdk/commit/74dbae8df8bcf31ac1bccf6104758a8c3151ec16)), closes [#40](https://github.com/onecli/node-sdk/issues/40)
+
 ## [2.2.1](https://github.com/onecli/node-sdk/compare/v2.2.0...v2.2.1) (2026-06-04)
 
 
