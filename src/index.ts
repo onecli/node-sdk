@@ -21,6 +21,8 @@ export type {
 } from "./agents/types.js";
 export type {
   ApprovalRequest,
+  ApprovalSummary,
+  ApprovalDetail,
   ManualApprovalCallback,
   ManualApprovalHandle,
 } from "./approvals/types.js";

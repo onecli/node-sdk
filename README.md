@@ -298,8 +298,16 @@ const handle = onecli.configureManualApproval(async (request) => {
   console.log(`${request.method} ${request.url}`);
   console.log(`Agent: ${request.agent.name}`);
 
-  if (request.bodyPreview) {
-    console.log(`Body: ${request.bodyPreview}`);
+  // `summary` is a structured, human-readable description of the request
+  // (e.g. a Gmail send's base64 body decoded into To/Subject/Body).
+  // `bodyPreview` is the same content flattened to text — safe to display directly.
+  if (request.summary) {
+    console.log(request.summary.action); // e.g. "Send email"
+    for (const { label, value } of request.summary.details) {
+      console.log(`${label}: ${value}`); // e.g. "To: a@b.com"
+    }
+  } else if (request.bodyPreview) {
+    console.log(request.bodyPreview);
   }
 
   // Return 'approve' to forward the request, 'deny' to block it
@@ -322,11 +330,21 @@ The callback is called once per pending approval. Multiple approvals are handled
 | `host`           | `string`                                                    | Hostname                                          |
 | `path`           | `string`                                                    | Request path                                      |
 | `headers`        | `Record<string, string>`                                    | Sanitized request headers (no credentials)        |
-| `bodyPreview`    | `string \| null`                                            | First 4KB of the request body, or `null`          |
+| `bodyPreview`    | `string \| null`                                            | Human-readable text rendering of the request, safe to display |
+| `summary`        | `ApprovalSummary \| null` (optional)                        | Structured form of `bodyPreview` (see below); may be absent on older gateways |
 | `agent`          | `{ id: string; name: string; externalId: string \| null }`  | The agent that made the request                   |
 | `createdAt`      | `string`                                                    | When the request arrived (ISO 8601)               |
 | `expiresAt`      | `string`                                                    | When the approval expires (ISO 8601)              |
 | `timeoutSeconds` | `number`                                                    | Seconds until auto-deny (300)                     |
+
+Where `ApprovalSummary` is:
+
+```typescript
+interface ApprovalSummary {
+  action: string; // e.g. "Send email"
+  details: { label: string; value: string }[]; // e.g. [{ label: "To", value: "a@b.com" }]
+}
+```
 
 **Returns** `ManualApprovalHandle` with a `stop()` method to disconnect.
 
