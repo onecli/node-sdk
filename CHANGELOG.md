@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/onecli/node-sdk/compare/v2.3.0...v2.4.0) (2026-06-24)
+
+
+### Features
+
+* add structured summary to manual-approval requests ([#43](https://github.com/onecli/node-sdk/issues/43)) ([ac95a43](https://github.com/onecli/node-sdk/commit/ac95a439409b1eef4d2a9f6eacaf72610da247ca))
+
 ## [2.3.0](https://github.com/onecli/node-sdk/compare/v2.2.1...v2.3.0) (2026-06-14)
 
 
