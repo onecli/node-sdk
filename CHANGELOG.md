@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/onecli/node-sdk/compare/v2.4.0...v2.5.0) (2026-07-04)
+
+
+### Features
+
+* add organization-scoped org sub-client (connections, rules, connect) ([#45](https://github.com/onecli/node-sdk/issues/45)) ([a057ec8](https://github.com/onecli/node-sdk/commit/a057ec820be6c9d12862325433d3add3e52f258d))
+
 ## [2.4.0](https://github.com/onecli/node-sdk/compare/v2.3.0...v2.4.0) (2026-06-24)
 
 
