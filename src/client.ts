@@ -2,6 +2,7 @@ import { ContainerClient } from "./container/index.js";
 import { AgentsClient } from "./agents/index.js";
 import { ApprovalClient } from "./approvals/index.js";
 import { ProvisionClient } from "./provisions/index.js";
+import { OrgClient } from "./org/index.js";
 import type { OneCLIOptions } from "./types.js";
 import type { RequestOptions } from "./request-options.js";
 import type {
@@ -33,6 +34,14 @@ export class OneCLI {
   private approvalClient: ApprovalClient;
   private provisionClient: ProvisionClient;
 
+  /**
+   * Organization-scoped resources (connections and rules shared by every
+   * project in the org). Requests carry no `X-Project-Id` — authenticate with
+   * an organization API key (`oc_org_...`). Requires OneCLI Cloud or a
+   * self-hosted Enterprise instance.
+   */
+  readonly org: OrgClient;
+
   constructor(options: OneCLIOptions = {}) {
     const apiKey = options.apiKey ?? process.env.ONECLI_API_KEY ?? "";
     const url = options.url ?? process.env.ONECLI_URL ?? DEFAULT_URL;
@@ -61,6 +70,7 @@ export class OneCLI {
       timeout,
       projectId,
     );
+    this.org = new OrgClient(url, apiKey, timeout);
   }
 
   /**

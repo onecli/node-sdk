@@ -111,6 +111,8 @@ await onecli.createAgent(
 );
 ```
 
+Organization keys also unlock the org-level surface under `onecli.org` — connections and rules shared by every project (no `projectId` needed). See the `onecli.org` section in the API reference below.
+
 ---
 
 ## API Reference
@@ -379,6 +381,55 @@ try {
 
 ---
 
+### `onecli.org` — organization-level resources
+
+Connections and rules shared by **every project** in the organization. Requests carry no `X-Project-Id`; authenticate with an organization API key (`oc_org_...`), and note every org operation requires the admin or owner role. Requires OneCLI Cloud or a self-hosted Enterprise instance (a 404 from servers without the org surface is mapped to a descriptive `OneCLIError`). `getAuthorizeUrl` is for server-side runtimes only (browser fetch hides redirect headers).
+
+```typescript
+const onecli = new OneCLI({ apiKey: "oc_org_your_org_key" });
+
+// Connect an API-key app org-wide
+await onecli.org.connectApp("fireflies", {
+  fields: { apiKey: "ff-xxxx" },
+  label: "shared",
+});
+
+// OAuth apps: get the authorize URL and open it in a browser
+const url = await onecli.org.getAuthorizeUrl("google-drive");
+
+// Manage org connections
+const connections = await onecli.org.listConnections();
+await onecli.org.renameConnection(connections[0].id, "prod");
+await onecli.org.deleteConnection(connections[0].id);
+
+// Org-wide rules (apply to every agent in the org)
+await onecli.org.createRule({
+  name: "Block Gmail sends",
+  hostPattern: "gmail.googleapis.com",
+  pathPattern: "/gmail/v1/users/me/messages/send",
+  action: "block",
+  enabled: true,
+});
+const rules = await onecli.org.listRules();
+await onecli.org.updateRule(rules[0].id, { enabled: false });
+await onecli.org.deleteRule(rules[0].id);
+```
+
+| Method | Endpoint | Returns |
+|--------|----------|---------|
+| `connectApp(provider, input)` | `POST /v1/org/apps/{provider}/connect` | `{ success: boolean }` |
+| `getAuthorizeUrl(provider, options?)` | `GET /v1/org/apps/{provider}/authorize` | authorize URL (`string`) |
+| `listConnections(provider?)` | `GET /v1/org/connections` | `OrgConnection[]` |
+| `renameConnection(id, label)` | `PATCH /v1/org/connections/{id}` | `OrgConnection` |
+| `deleteConnection(id)` | `DELETE /v1/org/connections/{id}` | `void` |
+| `listRules()` | `GET /v1/org/rules` | `OrgRule[]` |
+| `getRule(id)` | `GET /v1/org/rules/{id}` | `OrgRule` |
+| `createRule(input)` | `POST /v1/org/rules` | `OrgRule` |
+| `updateRule(id, input)` | `PATCH /v1/org/rules/{id}` | `{ success: boolean }` |
+| `deleteRule(id)` | `DELETE /v1/org/rules/{id}` | `void` |
+
+---
+
 ### Types
 
 All types are exported for use in your own code:
@@ -398,6 +449,13 @@ import type {
   ManualApprovalHandle,
   ProvisionProjectInput,
   ProvisionProjectResponse,
+  ConnectOrgAppInput,
+  GetOrgAuthorizeUrlOptions,
+  OrgConnection,
+  OrgRule,
+  OrgRuleCondition,
+  CreateOrgRuleInput,
+  UpdateOrgRuleInput,
 } from "@onecli-sh/sdk";
 ```
 
