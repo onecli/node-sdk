@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.0](https://github.com/onecli/node-sdk/compare/v2.5.0...v2.6.0) (2026-07-05)
+
+
+### Features
+
+* mark OrgRule endpoint fields optional for app-permission rules ([#47](https://github.com/onecli/node-sdk/issues/47)) ([411ff24](https://github.com/onecli/node-sdk/commit/411ff248ebe33681ca54e32cd15af09ee6ca36c2))
+
 ## [2.5.0](https://github.com/onecli/node-sdk/compare/v2.4.0...v2.5.0) (2026-07-04)
 
 
