@@ -203,6 +203,62 @@ describe("OrgClient rules", () => {
     );
   });
 
+  it("decodes mixed rule listings: masked app-permission rules + custom rules", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify([
+          {
+            id: "app-1",
+            name: "Gmail: Send email",
+            action: "manual_approval",
+            enabled: true,
+            rateLimit: null,
+            rateLimitWindow: null,
+            scope: "organization",
+            metadata: {
+              source: "app_permission",
+              provider: "gmail",
+              toolId: "send_email",
+            },
+            createdAt: "2026-07-04T00:00:00Z",
+          },
+          {
+            id: "custom-1",
+            name: "Block deletes",
+            hostPattern: "api.example.com",
+            pathPattern: "/v1/*",
+            method: "DELETE",
+            action: "block",
+            enabled: true,
+            rateLimit: null,
+            rateLimitWindow: null,
+            scope: "organization",
+            metadata: null,
+            createdAt: "2026-07-04T00:00:00Z",
+          },
+        ]),
+        { status: 200 },
+      ),
+    );
+
+    const rules = await client().listRules();
+
+    const appRule = rules[0]!;
+    expect(appRule.hostPattern).toBeUndefined();
+    expect(appRule.pathPattern).toBeUndefined();
+    expect(appRule.method).toBeUndefined();
+    expect(appRule.metadata).toEqual({
+      source: "app_permission",
+      provider: "gmail",
+      toolId: "send_email",
+    });
+
+    const custom = rules[1]!;
+    expect(custom.hostPattern).toBe("api.example.com");
+    expect(custom.pathPattern).toBe("/v1/*");
+    expect(custom.method).toBe("DELETE");
+  });
+
   it("lists, gets, updates, and deletes rules on the canonical paths", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")

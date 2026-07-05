@@ -49,13 +49,21 @@ export interface OrgRuleCondition {
   key?: string;
 }
 
-/** An organization-scoped policy rule, applied to every agent in the org. */
+/**
+ * An organization-scoped policy rule, applied to every agent in the org.
+ *
+ * The endpoint fields (`hostPattern`/`pathPattern`/`method`) are present on
+ * custom (user-authored) rules only. App-permission rules — rows whose
+ * `metadata.source` is `"app_permission"` — omit them; those rules are
+ * identified by `metadata.provider` + `metadata.toolId` and managed via
+ * `PUT /v1/org/rules/permissions/{provider}`.
+ */
 export interface OrgRule {
   id: string;
   name: string;
-  hostPattern: string;
-  pathPattern: string | null;
-  method: OrgRuleMethod | null;
+  hostPattern?: string;
+  pathPattern?: string | null;
+  method?: OrgRuleMethod | null;
   action: OrgRuleAction;
   enabled: boolean;
   rateLimit: number | null;

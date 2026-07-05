@@ -415,6 +415,11 @@ await onecli.org.updateRule(rules[0].id, { enabled: false });
 await onecli.org.deleteRule(rules[0].id);
 ```
 
+Rule listings mix two kinds of rules. Custom rules (like the one created
+above) carry your `hostPattern`/`pathPattern`/`method`. App-permission rules
+(managed through the app permissions surface) omit those endpoint fields and
+are identified by `metadata.provider` + `metadata.toolId` instead.
+
 | Method | Endpoint | Returns |
 |--------|----------|---------|
 | `connectApp(provider, input)` | `POST /v1/org/apps/{provider}/connect` | `{ success: boolean }` |
