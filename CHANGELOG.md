@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.0](https://github.com/onecli/node-sdk/compare/v2.6.0...v2.7.0) (2026-07-06)
+
+
+### Features
+
+* org-scoped manual approval handler (onecli.org.configureManualApproval) ([#49](https://github.com/onecli/node-sdk/issues/49)) ([62f09cb](https://github.com/onecli/node-sdk/commit/62f09cbbf3ce3caf6c3667d85105d1eb3b6a8016))
+
 ## [2.6.0](https://github.com/onecli/node-sdk/compare/v2.5.0...v2.6.0) (2026-07-05)
 
 
