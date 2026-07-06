@@ -2,6 +2,7 @@ export { OneCLI } from "./client.js";
 export { ContainerClient } from "./container/index.js";
 export { AgentsClient } from "./agents/index.js";
 export { ApprovalClient } from "./approvals/index.js";
+export { OrgApprovalClient } from "./approvals/org.js";
 export { ProvisionClient } from "./provisions/index.js";
 export { OrgClient } from "./org/index.js";
 export { OneCLIError, OneCLIRequestError } from "./errors.js";
@@ -26,6 +27,9 @@ export type {
   ApprovalDetail,
   ManualApprovalCallback,
   ManualApprovalHandle,
+  OrgApprovalRequest,
+  OrgManualApprovalCallback,
+  OrgManualApprovalOptions,
 } from "./approvals/types.js";
 export type {
   ProvisionProjectInput,

@@ -70,7 +70,7 @@ export class OneCLI {
       timeout,
       projectId,
     );
-    this.org = new OrgClient(url, apiKey, timeout);
+    this.org = new OrgClient(url, apiKey, timeout, gatewayUrl);
   }
 
   /**

@@ -3,6 +3,12 @@ import {
   OneCLIRequestError,
   toOneCLIError,
 } from "../errors.js";
+import { OrgApprovalClient } from "../approvals/org.js";
+import type {
+  ManualApprovalHandle,
+  OrgManualApprovalCallback,
+  OrgManualApprovalOptions,
+} from "../approvals/types.js";
 import type {
   ConnectOrgAppInput,
   CreateOrgRuleInput,
@@ -51,11 +57,18 @@ export class OrgClient {
   private baseUrl: string;
   private apiKey: string;
   private timeout: number;
+  private gatewayUrl: string | null;
 
-  constructor(baseUrl: string, apiKey: string, timeout: number) {
+  constructor(
+    baseUrl: string,
+    apiKey: string,
+    timeout: number,
+    gatewayUrl: string | null = null,
+  ) {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
     this.apiKey = apiKey;
     this.timeout = timeout;
+    this.gatewayUrl = gatewayUrl;
   }
 
   private buildHeaders(): Record<string, string> {
@@ -273,5 +286,30 @@ export class OrgClient {
       "DELETE",
       `/v1/org/rules/${encodeURIComponent(ruleId)}`,
     );
+  };
+
+  /**
+   * Register a callback for manual approval requests across **every** project
+   * in the organization. Starts background long-polling to the gateway; the
+   * callback is invoked once per pending request (concurrently), each carrying
+   * its `projectId`, and each decision is routed back to that project. Returns
+   * a handle to stop polling when shutting down.
+   *
+   * Requires an organization API key (`oc_org_...`) and OneCLI Cloud or a
+   * self-hosted Enterprise instance.
+   */
+  configureManualApproval = (
+    callback: OrgManualApprovalCallback,
+    options?: OrgManualApprovalOptions,
+  ): ManualApprovalHandle => {
+    const client = new OrgApprovalClient(
+      this.baseUrl,
+      this.apiKey,
+      this.gatewayUrl,
+    );
+    client.start(callback, options).catch(() => {
+      // Poll errors surface via options.onError and retry with backoff.
+    });
+    return { stop: () => client.stop() };
   };
 }

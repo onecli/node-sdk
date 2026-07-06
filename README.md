@@ -413,6 +413,17 @@ await onecli.org.createRule({
 const rules = await onecli.org.listRules();
 await onecli.org.updateRule(rules[0].id, { enabled: false });
 await onecli.org.deleteRule(rules[0].id);
+
+// Watch manual-approval requests across every project in the org. Each request
+// carries its own `projectId`, and the decision is routed back to that project.
+const handle = onecli.org.configureManualApproval(
+  async (request) => {
+    console.log(`[${request.projectId}] ${request.method} ${request.url}`);
+    return "approve"; // or "deny"
+  },
+  { onError: (err) => console.error("approval poll failed", err) },
+);
+// handle.stop() when shutting down
 ```
 
 Rule listings mix two kinds of rules. Custom rules (like the one created
@@ -432,6 +443,7 @@ are identified by `metadata.provider` + `metadata.toolId` instead.
 | `createRule(input)` | `POST /v1/org/rules` | `OrgRule` |
 | `updateRule(id, input)` | `PATCH /v1/org/rules/{id}` | `{ success: boolean }` |
 | `deleteRule(id)` | `DELETE /v1/org/rules/{id}` | `void` |
+| `configureManualApproval(cb, options?)` | `GET /v1/org/approvals/pending` (long-poll) | `ManualApprovalHandle` |
 
 ---
 
@@ -452,6 +464,9 @@ import type {
   ApprovalRequest,
   ManualApprovalCallback,
   ManualApprovalHandle,
+  OrgApprovalRequest,
+  OrgManualApprovalCallback,
+  OrgManualApprovalOptions,
   ProvisionProjectInput,
   ProvisionProjectResponse,
   ConnectOrgAppInput,

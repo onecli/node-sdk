@@ -74,3 +74,32 @@ export interface ManualApprovalHandle {
   /** Stop polling and disconnect. */
   stop: () => void;
 }
+
+/**
+ * An approval request from the organization-scoped poll. Identical to
+ * {@link ApprovalRequest} but carries the `projectId` of the project it belongs
+ * to — a single org handler spans every project, so each decision is routed
+ * back to the right one.
+ */
+export interface OrgApprovalRequest extends ApprovalRequest {
+  /** The project this request belongs to. */
+  projectId: string;
+}
+
+/**
+ * Callback invoked once per organization-scoped approval request. Like
+ * {@link ManualApprovalCallback}, but the request carries its `projectId`.
+ */
+export type OrgManualApprovalCallback = (
+  request: OrgApprovalRequest,
+) => Promise<"approve" | "deny">;
+
+/** Options for `onecli.org.configureManualApproval()`. */
+export interface OrgManualApprovalOptions {
+  /**
+   * Called when a poll cycle fails (auth, network, or gateway-URL resolution).
+   * The loop backs off and retries either way; without a handler these errors
+   * are swallowed silently.
+   */
+  onError?: (error: unknown) => void;
+}
