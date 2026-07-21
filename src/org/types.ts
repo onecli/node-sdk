@@ -55,8 +55,9 @@ export interface OrgRuleCondition {
  * The endpoint fields (`hostPattern`/`pathPattern`/`method`) are present on
  * custom (user-authored) rules only. App-permission rules — rows whose
  * `metadata.source` is `"app_permission"` — omit them; those rules are
- * identified by `metadata.provider` + `metadata.toolId` and managed via
- * `PUT /v1/org/rules/permissions/{provider}`.
+ * identified by `metadata.provider` + `metadata.toolId`. On cloud
+ * deployments app permissions are managed as policy-engine rules (see
+ * `createPolicyRule`); the legacy permissions endpoint is retired there.
  */
 export interface OrgRule {
   id: string;
@@ -102,4 +103,196 @@ export interface UpdateOrgRuleInput {
   rateLimit?: number | null;
   rateLimitWindow?: OrgRuleRateLimitWindow | null;
   conditions?: OrgRuleCondition[] | null;
+}
+
+/** A policy-engine rule action. */
+export type PolicyRuleAction = "allow" | "block";
+
+/** A policy-engine rule's lifecycle status. */
+export type PolicyRuleStatus = "draft" | "published";
+
+/**
+ * A principal a policy rule applies to, as the API returns it. Org rules
+ * carry `agentGroup`, `user`, or `group` identities (`agent` exists at
+ * project scope only); an empty identity list means "everyone".
+ */
+export interface PolicyRuleIdentity {
+  type: "agent" | "agentGroup" | "user" | "group";
+  id: string;
+}
+
+/**
+ * An identity on an org policy rule INPUT. The org API rejects `agent`
+ * identities (those exist at project scope only), so the input type
+ * excludes that kind entirely.
+ */
+export interface OrgPolicyRuleIdentityInput {
+  type: Exclude<PolicyRuleIdentity["type"], "agent">;
+  id: string;
+}
+
+/**
+ * One destination a policy rule matches — a discriminated union on `kind`,
+ * as the API RETURNS it: array fields are always present (`[]` when unset)
+ * and unset scalars are explicit `null`s. Rule inputs use
+ * {@link PolicyRuleTargetInput} — the same union with optional fields
+ * instead (the API rejects `null`s on write).
+ */
+export type PolicyRuleTarget =
+  | {
+      kind: "app";
+      provider: string;
+      tools: string[];
+      connectionScope: "organization" | "project" | null;
+    }
+  | { kind: "connection"; connectionId: string; tools: string[] }
+  | {
+      kind: "secret";
+      secretId: string | null;
+      secretScope: "organization" | "project" | null;
+    }
+  | {
+      kind: "network";
+      hostPattern: string;
+      pathPattern: string | null;
+      // The response reflects storage: rows backfilled from the legacy model
+      // may carry method strings outside the 5-verb authoring enum.
+      method: string | null;
+    };
+
+/**
+ * A target on a policy rule INPUT — omit optional fields when unused (the
+ * API rejects explicit `null`s on write). An `app` target names a provider
+ * (optionally narrowed by `tools`); a `connection` target names one
+ * connection by `connectionId`; a `secret` target names a specific
+ * `secretId` XOR a `secretScope` level; a `network` target matches raw
+ * host/path/method patterns.
+ */
+export type PolicyRuleTargetInput =
+  | {
+      kind: "app";
+      provider: string;
+      tools?: string[];
+      connectionScope?: "organization" | "project";
+    }
+  | { kind: "connection"; connectionId: string; tools?: string[] }
+  | {
+      kind: "secret";
+      secretId?: string;
+      secretScope?: "organization" | "project";
+    }
+  | {
+      kind: "network";
+      hostPattern: string;
+      pathPattern?: string;
+      method?: OrgRuleMethod;
+    };
+
+/**
+ * A policy rule's `conditions` on input: EITHER behavioral (body-contains)
+ * conditions OR a connection target's resource scoping (`repositories` /
+ * `folders`) — never both on one rule.
+ */
+export type PolicyRuleConditionsInput =
+  | OrgRuleCondition[]
+  | { repositories: string[] }
+  | { folders: string[] };
+
+/**
+ * An organization policy-engine rule (the staged draft→publish model).
+ * Writes land in the DRAFT and enforce only after a publish; published row
+ * `id`s regenerate on every publish — `logicalId` is the identity that is
+ * stable across statuses and generations.
+ */
+export interface OrgPolicyRule {
+  id: string;
+  scope: string;
+  status: PolicyRuleStatus;
+  generation: number;
+  priority: number;
+  enabled: boolean;
+  isDefault: boolean;
+  logicalId: string;
+  source: string;
+  name: string;
+  description: string | null;
+  action: PolicyRuleAction;
+  rateLimit: number | null;
+  rateLimitWindow: OrgRuleRateLimitWindow | null;
+  requireApproval: boolean;
+  conditions: unknown;
+  identities: PolicyRuleIdentity[];
+  targets: PolicyRuleTarget[];
+  createdAt: string;
+}
+
+/**
+ * Input for creating a policy-engine rule. `targets` must name at least one
+ * destination; `rateLimit`/`rateLimitWindow` are paired and — like
+ * `requireApproval` — valid only on `action: "allow"`.
+ */
+export interface CreateOrgPolicyRuleInput {
+  name: string;
+  description?: string;
+  enabled?: boolean;
+  action: PolicyRuleAction;
+  rateLimit?: number;
+  rateLimitWindow?: OrgRuleRateLimitWindow;
+  requireApproval?: boolean;
+  conditions?: PolicyRuleConditionsInput;
+  identities?: OrgPolicyRuleIdentityInput[];
+  targets: PolicyRuleTargetInput[];
+}
+
+/**
+ * Input for updating a DRAFT policy-engine rule — every field optional;
+ * nullable fields accept an explicit `null` to clear. The server rejects
+ * an empty body with 422 ("At least one field must be provided").
+ */
+export interface UpdateOrgPolicyRuleInput {
+  name?: string;
+  description?: string | null;
+  enabled?: boolean;
+  action?: PolicyRuleAction;
+  rateLimit?: number | null;
+  rateLimitWindow?: OrgRuleRateLimitWindow | null;
+  requireApproval?: boolean;
+  conditions?: PolicyRuleConditionsInput | null;
+  identities?: OrgPolicyRuleIdentityInput[];
+  targets?: PolicyRuleTargetInput[];
+}
+
+/** Per-write publish control (the staged model). */
+export interface PolicyWriteOptions {
+  /**
+   * Skip the automatic publish after the write, leaving it staged in the
+   * draft. Publish later with `publishPolicy()`. Note a publish snapshots
+   * the WHOLE org draft — including changes staged by other users — so
+   * `skipPublish` + an explicit reviewed `publishPolicy()` is the safe path
+   * when several people edit policy.
+   */
+  skipPublish?: boolean;
+}
+
+/**
+ * The result of a policy write plus its publish outcome — discriminated on
+ * `published`, so narrowing on it types `generation` accordingly. `result`
+ * is the written entity (the rule, or the reordered rule list).
+ */
+export type PolicyWriteResult<T> =
+  | { result: T; published: true; generation: number }
+  | { result: T; published: false; generation: null };
+
+/** The result of a policy publish. */
+export interface PolicyPublishResult {
+  generation: number;
+  ruleCount: number;
+}
+
+/** The most recent publish (null when the org was never published). */
+export interface PolicyLastPublish {
+  generation: number;
+  ruleCount: number;
+  appliedAt: string;
+  appliedBy: { name: string | null; email: string } | null;
 }

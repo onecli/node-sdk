@@ -311,3 +311,277 @@ describe("OneCLI facade", () => {
     expect(onecli.org).toBeInstanceOf(OrgClient);
   });
 });
+
+describe("OrgClient policy engine", () => {
+  const policyRule = {
+    id: "r1",
+    scope: "organization",
+    status: "draft",
+    generation: 0,
+    priority: 0,
+    enabled: true,
+    isDefault: false,
+    logicalId: "l1",
+    source: "custom",
+    name: "Block evil",
+    description: null,
+    action: "block",
+    rateLimit: null,
+    rateLimitWindow: null,
+    requireApproval: false,
+    conditions: null,
+    identities: [],
+    targets: [{ kind: "network", hostPattern: "evil.com" }],
+    createdAt: "2026-01-01T00:00:00Z",
+  };
+
+  it("createPolicyRule POSTs the rule then publishes (auto-publish default)", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(policyRule), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ generation: 4, ruleCount: 3 }), {
+          status: 200,
+        }),
+      );
+
+    const outcome = await client().createPolicyRule({
+      name: "Block evil",
+      action: "block",
+      targets: [{ kind: "network", hostPattern: "evil.com" }],
+    });
+
+    expect(outcome.published).toBe(true);
+    expect(outcome.generation).toBe(4);
+    expect(outcome.result.logicalId).toBe("l1");
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:3000/v1/org/policy/rules",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:3000/v1/org/policy/publish",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("skipPublish stages without publishing", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify(policyRule), { status: 201 }),
+      );
+
+    const outcome = await client().createPolicyRule(
+      {
+        name: "Block evil",
+        action: "block",
+        targets: [{ kind: "network", hostPattern: "evil.com" }],
+      },
+      { skipPublish: true },
+    );
+
+    expect(outcome).toEqual({
+      result: policyRule,
+      published: false,
+      generation: null,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("a publish failure after a successful write rethrows the publish error (the write stays staged)", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(policyRule), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              message: "A staged rule needs a paid plan",
+              type: "validation_error",
+            },
+          }),
+          { status: 422 },
+        ),
+      );
+
+    await expect(
+      client().createPolicyRule({
+        name: "Block evil",
+        action: "block",
+        targets: [{ kind: "network", hostPattern: "evil.com" }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 422 });
+  });
+
+  it("listPolicyRules carries the status query; reorder PUTs the full permutation", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([policyRule]), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([policyRule]), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ generation: 5, ruleCount: 1 }), {
+          status: 200,
+        }),
+      );
+
+    await client().listPolicyRules("published");
+    await client().reorderPolicyRules(["r1"]);
+
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:3000/v1/org/policy/rules?status=published",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:3000/v1/org/policy/rules/order",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ orderedIds: ["r1"] }),
+      }),
+    );
+  });
+
+  it("getPolicyLastPublish returns null when never published", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("null", { status: 200 }),
+    );
+    await expect(client().getPolicyLastPublish()).resolves.toBeNull();
+  });
+
+  it("updatePolicyRule PATCHes the encoded id with the input body then publishes", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(policyRule), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ generation: 6, ruleCount: 3 }), {
+          status: 200,
+        }),
+      );
+
+    const outcome = await client().updatePolicyRule("r 1", {
+      enabled: false,
+      rateLimit: null,
+    });
+
+    expect(outcome.published).toBe(true);
+    expect(outcome.generation).toBe(6);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:3000/v1/org/policy/rules/r%201",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ enabled: false, rateLimit: null }),
+      }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:3000/v1/org/policy/publish",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("deletePolicyRule DELETEs (204) then publishes, with a null result", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ generation: 7, ruleCount: 2 }), {
+          status: 200,
+        }),
+      );
+
+    const outcome = await client().deletePolicyRule("r1");
+
+    expect(outcome).toEqual({ result: null, published: true, generation: 7 });
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:3000/v1/org/policy/rules/r1",
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:3000/v1/org/policy/publish",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("getPolicyDefault carries the status query; setPolicyDefault PATCHes the action then publishes", async () => {
+    const defaultRule = { ...policyRule, isDefault: true, source: "default" };
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(defaultRule), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(defaultRule), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ generation: 8, ruleCount: 2 }), {
+          status: 200,
+        }),
+      );
+
+    await client().getPolicyDefault("published");
+    const outcome = await client().setPolicyDefault("block");
+
+    expect(outcome.published).toBe(true);
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:3000/v1/org/policy/default?status=published",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchSpy).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:3000/v1/org/policy/default",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ action: "block" }),
+      }),
+    );
+  });
+
+  it("getPolicyRule GETs the encoded draft id", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify(policyRule), { status: 200 }),
+      );
+
+    const rule = await client().getPolicyRule("r/1");
+
+    expect(rule.logicalId).toBe("l1");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/v1/org/policy/rules/r%2F1",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("policy routes get the route-miss Cloud/Enterprise hint on community servers", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            message: "Unrecognized request URL (GET: /v1/org/policy/rules).",
+            type: "invalid_request_error",
+          },
+        }),
+        { status: 404 },
+      ),
+    );
+    await expect(client().listPolicyRules()).rejects.toBeInstanceOf(
+      OneCLIError,
+    );
+  });
+});
