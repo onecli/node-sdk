@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/onecli/node-sdk/compare/v2.7.0...v2.8.0) (2026-07-21)
+
+
+### Features
+
+* add organization policy rule methods ([#52](https://github.com/onecli/node-sdk/issues/52)) ([7843b08](https://github.com/onecli/node-sdk/commit/7843b08031a704dd28a22bfef0176d67378e56cb))
+
 ## [2.7.0](https://github.com/onecli/node-sdk/compare/v2.6.0...v2.7.0) (2026-07-06)
 
 
