@@ -11,10 +11,19 @@ import type {
 } from "../approvals/types.js";
 import type {
   ConnectOrgAppInput,
+  CreateOrgPolicyRuleInput,
   CreateOrgRuleInput,
   GetOrgAuthorizeUrlOptions,
   OrgConnection,
+  OrgPolicyRule,
   OrgRule,
+  PolicyLastPublish,
+  PolicyPublishResult,
+  PolicyRuleAction,
+  PolicyRuleStatus,
+  PolicyWriteOptions,
+  PolicyWriteResult,
+  UpdateOrgPolicyRuleInput,
   UpdateOrgRuleInput,
 } from "./types.js";
 
@@ -258,6 +267,9 @@ export class OrgClient {
 
   /**
    * Create an organization rule.
+   *
+   * @deprecated Cloud deployments reject this write with 410 Gone — use
+   * {@link createPolicyRule}. Pre-cutover self-hosted servers still accept it.
    */
   createRule = async (input: CreateOrgRuleInput): Promise<OrgRule> => {
     return this.request<OrgRule>("POST", "/v1/org/rules", input);
@@ -266,6 +278,9 @@ export class OrgClient {
   /**
    * Update an organization rule. Nullable fields accept an explicit `null`
    * to clear the stored value.
+   *
+   * @deprecated Cloud deployments reject this write with 410 Gone — use
+   * {@link updatePolicyRule}. Pre-cutover self-hosted servers still accept it.
    */
   updateRule = async (
     ruleId: string,
@@ -280,12 +295,176 @@ export class OrgClient {
 
   /**
    * Delete an organization rule.
+   *
+   * @deprecated Cloud deployments reject this write with 410 Gone — use
+   * {@link deletePolicyRule}. Pre-cutover self-hosted servers still accept it.
    */
   deleteRule = async (ruleId: string): Promise<void> => {
     await this.request<undefined>(
       "DELETE",
       `/v1/org/rules/${encodeURIComponent(ruleId)}`,
     );
+  };
+
+  // ── The policy engine (staged draft → publish) ────────────────────────────
+  //
+  // Writes land in the org's DRAFT and enforce only after a publish. By
+  // default each write method publishes immediately; note a publish
+  // snapshots the WHOLE org draft — including changes staged by other users
+  // — so pass `{ skipPublish: true }` and call `publishPolicy()` explicitly
+  // when several people edit policy. If the publish step fails after a
+  // successful write, the write IS staged and the PUBLISH request's error is
+  // rethrown unchanged (its `url` ends with `/publish`) — do NOT retry the
+  // write (that would stage a duplicate); inspect via
+  // `listPolicyRules("draft")` and retry `publishPolicy()` instead.
+
+  /**
+   * List the organization's policy-engine rules — the DRAFT working copy by
+   * default, or the enforced set with `"published"`.
+   */
+  listPolicyRules = async (
+    status: PolicyRuleStatus = "draft",
+  ): Promise<OrgPolicyRule[]> => {
+    return this.request<OrgPolicyRule[]>(
+      "GET",
+      `/v1/org/policy/rules?status=${status}`,
+    );
+  };
+
+  /**
+   * Get one DRAFT policy rule. Published row ids regenerate on every
+   * publish — list with `"published"` and match by `logicalId` instead.
+   */
+  getPolicyRule = async (ruleId: string): Promise<OrgPolicyRule> => {
+    return this.request<OrgPolicyRule>(
+      "GET",
+      `/v1/org/policy/rules/${encodeURIComponent(ruleId)}`,
+    );
+  };
+
+  /**
+   * Create a policy rule (and publish, unless `skipPublish`).
+   */
+  createPolicyRule = async (
+    input: CreateOrgPolicyRuleInput,
+    options?: PolicyWriteOptions,
+  ): Promise<PolicyWriteResult<OrgPolicyRule>> => {
+    const rule = await this.request<OrgPolicyRule>(
+      "POST",
+      "/v1/org/policy/rules",
+      input,
+    );
+    return this.finishPolicyWrite(rule, options);
+  };
+
+  /**
+   * Update a DRAFT policy rule (and publish, unless `skipPublish`).
+   */
+  updatePolicyRule = async (
+    ruleId: string,
+    input: UpdateOrgPolicyRuleInput,
+    options?: PolicyWriteOptions,
+  ): Promise<PolicyWriteResult<OrgPolicyRule>> => {
+    const rule = await this.request<OrgPolicyRule>(
+      "PATCH",
+      `/v1/org/policy/rules/${encodeURIComponent(ruleId)}`,
+      input,
+    );
+    return this.finishPolicyWrite(rule, options);
+  };
+
+  /**
+   * Delete a DRAFT policy rule (and publish, unless `skipPublish`).
+   */
+  deletePolicyRule = async (
+    ruleId: string,
+    options?: PolicyWriteOptions,
+  ): Promise<PolicyWriteResult<null>> => {
+    await this.request<undefined>(
+      "DELETE",
+      `/v1/org/policy/rules/${encodeURIComponent(ruleId)}`,
+    );
+    return this.finishPolicyWrite(null, options);
+  };
+
+  /**
+   * Reorder the DRAFT (and publish, unless `skipPublish`). `orderedIds`
+   * must name EVERY non-default draft rule exactly once — take the full
+   * list from `listPolicyRules("draft")`; the server rejects a partial
+   * permutation with 409.
+   */
+  reorderPolicyRules = async (
+    orderedIds: string[],
+    options?: PolicyWriteOptions,
+  ): Promise<PolicyWriteResult<OrgPolicyRule[]>> => {
+    const rules = await this.request<OrgPolicyRule[]>(
+      "PUT",
+      "/v1/org/policy/rules/order",
+      { orderedIds },
+    );
+    return this.finishPolicyWrite(rules, options);
+  };
+
+  /**
+   * Get the organization's terminal Default Rule (a virtual default is
+   * returned when none is persisted yet).
+   */
+  getPolicyDefault = async (
+    status: PolicyRuleStatus = "draft",
+  ): Promise<OrgPolicyRule> => {
+    return this.request<OrgPolicyRule>(
+      "GET",
+      `/v1/org/policy/default?status=${status}`,
+    );
+  };
+
+  /**
+   * Set the Default Rule's action (and publish, unless `skipPublish`).
+   */
+  setPolicyDefault = async (
+    action: PolicyRuleAction,
+    options?: PolicyWriteOptions,
+  ): Promise<PolicyWriteResult<OrgPolicyRule>> => {
+    const rule = await this.request<OrgPolicyRule>(
+      "PATCH",
+      "/v1/org/policy/default",
+      { action },
+    );
+    return this.finishPolicyWrite(rule, options);
+  };
+
+  /**
+   * Publish the WHOLE org draft — every staged change, including other
+   * users' — into a new enforced generation.
+   */
+  publishPolicy = async (): Promise<PolicyPublishResult> => {
+    return this.request<PolicyPublishResult>(
+      "POST",
+      "/v1/org/policy/publish",
+      {},
+    );
+  };
+
+  /**
+   * The most recent publish, or `null` when the org was never published.
+   */
+  getPolicyLastPublish = async (): Promise<PolicyLastPublish | null> => {
+    return this.request<PolicyLastPublish | null>(
+      "GET",
+      "/v1/org/policy/last-publish",
+    );
+  };
+
+  /** Complete a policy write per the publish option (see the section note). */
+  private finishPolicyWrite = async <T>(
+    result: T,
+    options?: PolicyWriteOptions,
+  ): Promise<PolicyWriteResult<T>> => {
+    if (options?.skipPublish) {
+      return { result, published: false, generation: null };
+    }
+    const publish = await this.publishPolicy();
+    return { result, published: true, generation: publish.generation };
   };
 
   /**

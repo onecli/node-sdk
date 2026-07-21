@@ -402,17 +402,23 @@ const connections = await onecli.org.listConnections();
 await onecli.org.renameConnection(connections[0].id, "prod");
 await onecli.org.deleteConnection(connections[0].id);
 
-// Org-wide rules (apply to every agent in the org)
-await onecli.org.createRule({
+// Org-wide policy rules (the policy engine — staged draft → publish).
+// Writes publish automatically; pass { skipPublish: true } to stage and
+// review first (a publish snapshots the WHOLE org draft, including changes
+// staged by other users).
+const { result: created } = await onecli.org.createPolicyRule({
   name: "Block Gmail sends",
-  hostPattern: "gmail.googleapis.com",
-  pathPattern: "/gmail/v1/users/me/messages/send",
   action: "block",
-  enabled: true,
+  targets: [{ kind: "app", provider: "gmail", tools: ["send_email"] }],
 });
-const rules = await onecli.org.listRules();
-await onecli.org.updateRule(rules[0].id, { enabled: false });
-await onecli.org.deleteRule(rules[0].id);
+const draft = await onecli.org.listPolicyRules(); // "published" = enforced
+await onecli.org.updatePolicyRule(created.id, { enabled: false });
+await onecli.org.deletePolicyRule(created.id);
+await onecli.org.publishPolicy(); // publish anything still staged
+
+// Legacy org rules (deprecated): cloud deployments reject these writes with
+// 410 Gone; pre-cutover self-hosted servers still accept them.
+const legacyRules = await onecli.org.listRules();
 
 // Watch manual-approval requests across every project in the org. Each request
 // carries its own `projectId`, and the decision is routed back to that project.
@@ -426,10 +432,14 @@ const handle = onecli.org.configureManualApproval(
 // handle.stop() when shutting down
 ```
 
-Rule listings mix two kinds of rules. Custom rules (like the one created
-above) carry your `hostPattern`/`pathPattern`/`method`. App-permission rules
-(managed through the app permissions surface) omit those endpoint fields and
-are identified by `metadata.provider` + `metadata.toolId` instead.
+Policy rules carry structured `targets` (app / connection / secret /
+network) and `identities` (org rules take `agentGroup`/`user`/`group`).
+Rule responses use `PolicyRuleTarget` (arrays always present, unset scalars
+`null`); inputs use `PolicyRuleTargetInput` (omit unused fields — the API
+rejects `null`s on write). `updatePolicyRule` requires at least one field
+(an empty input is rejected with 422). Legacy rule listings still mix
+custom rows (with `hostPattern`/etc.) and read-only app-permission rows
+identified by `metadata.provider` + `metadata.toolId`.
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
@@ -438,11 +448,20 @@ are identified by `metadata.provider` + `metadata.toolId` instead.
 | `listConnections(provider?)` | `GET /v1/org/connections` | `OrgConnection[]` |
 | `renameConnection(id, label)` | `PATCH /v1/org/connections/{id}` | `OrgConnection` |
 | `deleteConnection(id)` | `DELETE /v1/org/connections/{id}` | `void` |
-| `listRules()` | `GET /v1/org/rules` | `OrgRule[]` |
-| `getRule(id)` | `GET /v1/org/rules/{id}` | `OrgRule` |
-| `createRule(input)` | `POST /v1/org/rules` | `OrgRule` |
-| `updateRule(id, input)` | `PATCH /v1/org/rules/{id}` | `{ success: boolean }` |
-| `deleteRule(id)` | `DELETE /v1/org/rules/{id}` | `void` |
+| `listPolicyRules(status?)` | `GET /v1/org/policy/rules` | `OrgPolicyRule[]` |
+| `getPolicyRule(id)` | `GET /v1/org/policy/rules/{id}` | `OrgPolicyRule` |
+| `createPolicyRule(input, opts?)` | `POST /v1/org/policy/rules` (+publish) | `PolicyWriteResult<OrgPolicyRule>` |
+| `updatePolicyRule(id, input, opts?)` | `PATCH /v1/org/policy/rules/{id}` (+publish) | `PolicyWriteResult<OrgPolicyRule>` |
+| `deletePolicyRule(id, opts?)` | `DELETE /v1/org/policy/rules/{id}` (+publish) | `PolicyWriteResult<null>` |
+| `reorderPolicyRules(ids, opts?)` | `PUT /v1/org/policy/rules/order` (+publish) | `PolicyWriteResult<OrgPolicyRule[]>` |
+| `getPolicyDefault(status?)` / `setPolicyDefault(action, opts?)` | `GET`/`PATCH /v1/org/policy/default` | `OrgPolicyRule` / `PolicyWriteResult<OrgPolicyRule>` |
+| `publishPolicy()` | `POST /v1/org/policy/publish` | `PolicyPublishResult` |
+| `getPolicyLastPublish()` | `GET /v1/org/policy/last-publish` | `PolicyLastPublish \| null` |
+| `listRules()` *(legacy)* | `GET /v1/org/rules` | `OrgRule[]` |
+| `getRule(id)` *(legacy)* | `GET /v1/org/rules/{id}` | `OrgRule` |
+| `createRule(input)` *(deprecated — 410 on cloud)* | `POST /v1/org/rules` | `OrgRule` |
+| `updateRule(id, input)` *(deprecated — 410 on cloud)* | `PATCH /v1/org/rules/{id}` | `{ success: boolean }` |
+| `deleteRule(id)` *(deprecated — 410 on cloud)* | `DELETE /v1/org/rules/{id}` | `void` |
 | `configureManualApproval(cb, options?)` | `GET /v1/org/approvals/pending` (long-poll) | `ManualApprovalHandle` |
 
 ---
@@ -476,6 +495,20 @@ import type {
   OrgRuleCondition,
   CreateOrgRuleInput,
   UpdateOrgRuleInput,
+  OrgPolicyRule,
+  PolicyRuleAction,
+  PolicyRuleStatus,
+  PolicyRuleTarget,
+  PolicyRuleTargetInput,
+  PolicyRuleIdentity,
+  OrgPolicyRuleIdentityInput,
+  PolicyRuleConditionsInput,
+  CreateOrgPolicyRuleInput,
+  UpdateOrgPolicyRuleInput,
+  PolicyWriteOptions,
+  PolicyWriteResult,
+  PolicyPublishResult,
+  PolicyLastPublish,
 } from "@onecli-sh/sdk";
 ```
 
