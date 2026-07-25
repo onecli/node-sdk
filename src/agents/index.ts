@@ -5,8 +5,12 @@ import {
 } from "../errors.js";
 import type {
   Agent,
+  AppPermissionDefinition,
+  ConnectionAgentAccess,
+  EffectiveAppPermissions,
   CreateAgentInput,
   CreateAgentResponse,
+  EffectiveCredentials,
   EnsureAgentResponse,
 } from "./types.js";
 import type { RequestOptions } from "../request-options.js";
@@ -110,6 +114,105 @@ export class AgentsClient {
       throw toOneCLIError(error);
     }
   };
+
+  /**
+   * Shared GET for the read-only reflections. Mirrors `listAgents`' error
+   * handling so every method on this client fails the same way.
+   */
+  private getJson = async <T>(
+    path: string,
+    options?: RequestOptions,
+  ): Promise<T> => {
+    const url = `${this.baseUrl}${path}`;
+
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: this.buildHeaders(options),
+        signal: AbortSignal.timeout(this.timeout),
+      });
+
+      if (!res.ok) {
+        throw new OneCLIRequestError(
+          `OneCLI returned ${res.status} ${res.statusText}`,
+          { url, statusCode: res.status },
+        );
+      }
+
+      return (await res.json()) as T;
+    } catch (error) {
+      if (
+        error instanceof OneCLIError ||
+        error instanceof OneCLIRequestError
+      ) {
+        throw error;
+      }
+      throw toOneCLIError(error);
+    }
+  };
+
+  /**
+   * Which credentials this agent can actually use, and what each one can do
+   * under the published policy.
+   *
+   * Replaces the retired `GET /v1/agents/:id/{secrets,connections}` reads. Those
+   * returned a stored assignment list; this returns the EFFECTIVE set, so a
+   * credential granted by a policy rule appears here even though no assignment
+   * row exists for it.
+   */
+  getEffectiveCredentials = async (
+    agentId: string,
+    options?: RequestOptions,
+  ): Promise<EffectiveCredentials> =>
+    this.getJson<EffectiveCredentials>(
+      `/v1/agents/${encodeURIComponent(agentId)}/effective-credentials`,
+      options,
+    );
+
+  /**
+   * What the project's published policy allows for an app, per tool. Omit
+   * `agentId` for the all-agents baseline.
+   *
+   * The project-scope twin of `org.getEffectiveAppPermissions`, and the
+   * replacement for the retired `/v1/rules/permissions/:provider`.
+   */
+  getEffectiveAppPermissions = async (
+    input: { provider: string; agentId?: string },
+    options?: RequestOptions,
+  ): Promise<EffectiveAppPermissions> => {
+    const query = new URLSearchParams({ provider: input.provider });
+    if (input.agentId) query.set("agentId", input.agentId);
+    return this.getJson<EffectiveAppPermissions>(
+      `/v1/policy/effective-app-permissions?${query.toString()}`,
+      options,
+    );
+  };
+
+  /**
+   * Which agents can reach a connection, and what each can do with it.
+   *
+   * Replaces the retired `GET /v1/connections/:id/agents`.
+   */
+  getConnectionAgentAccess = async (
+    connectionId: string,
+    options?: RequestOptions,
+  ): Promise<ConnectionAgentAccess> =>
+    this.getJson<ConnectionAgentAccess>(
+      `/v1/connections/${encodeURIComponent(connectionId)}/effective-agents`,
+      options,
+    );
+
+  /**
+   * Every provider's public tool catalog — the tool ids an app-target policy
+   * rule can name. Global data; no project context required.
+   */
+  listAppPermissionDefinitions = async (
+    options?: RequestOptions,
+  ): Promise<AppPermissionDefinition[]> =>
+    this.getJson<AppPermissionDefinition[]>(
+      "/v1/apps/permission-definitions",
+      options,
+    );
 
   /**
    * Whether an agent with the given identifier already exists in the project.

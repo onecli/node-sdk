@@ -231,6 +231,44 @@ for (const agent of agents) {
 
 **Returns** `Array<{ id, name, identifier, isDefault, createdAt }>`
 
+#### `onecli.getEffectiveCredentials(agentId, options?)`
+
+Which credentials the agent can actually use, and what each one can do under the
+published policy. Read-only.
+
+```ts
+const { mode, secrets, connections } =
+  await onecli.getEffectiveCredentials("agent-id");
+```
+
+Replaces the retired `GET /v1/agents/{id}/secrets` and `/connections` reads.
+Those returned a stored assignment list; this returns the **effective** set, so a
+credential granted by a policy rule appears here even though no assignment row
+exists for it.
+
+#### `onecli.getEffectiveAppPermissions({ provider, agentId? }, options?)`
+
+What the project's published policy allows for an app, per tool. Omit `agentId`
+for the all-agents baseline. The project-scope twin of
+`onecli.org.getEffectiveAppPermissions`, and the replacement for the retired
+`GET /v1/rules/permissions/{provider}`.
+
+```ts
+const { groups, variesByIdentity } = await onecli.getEffectiveAppPermissions({
+  provider: "gmail",
+});
+```
+
+#### `onecli.getConnectionAgentAccess(connectionId, options?)`
+
+Which agents can reach a connection, and what each can do with it. Replaces the
+retired `GET /v1/connections/{id}/agents`.
+
+#### `onecli.listAppPermissionDefinitions(options?)`
+
+Every provider's public tool catalog — the tool ids an `app`-target policy rule
+can name.
+
 #### `onecli.ensureAgent(input, options?)`
 
 Ensure an agent exists. Creates it if missing, returns normally if it already exists.
@@ -416,9 +454,10 @@ await onecli.org.updatePolicyRule(created.id, { enabled: false });
 await onecli.org.deletePolicyRule(created.id);
 await onecli.org.publishPolicy(); // publish anything still staged
 
-// Legacy org rules (deprecated): cloud deployments reject these writes with
-// 410 Gone; pre-cutover self-hosted servers still accept them.
-const legacyRules = await onecli.org.listRules();
+// What the published policy actually allows for an app, per tool — read-only.
+const effective = await onecli.org.getEffectiveAppPermissions({
+  provider: "gmail",
+});
 
 // Watch manual-approval requests across every project in the org. Each request
 // carries its own `projectId`, and the decision is routed back to that project.
@@ -457,11 +496,7 @@ identified by `metadata.provider` + `metadata.toolId`.
 | `getPolicyDefault(status?)` / `setPolicyDefault(action, opts?)` | `GET`/`PATCH /v1/org/policy/default` | `OrgPolicyRule` / `PolicyWriteResult<OrgPolicyRule>` |
 | `publishPolicy()` | `POST /v1/org/policy/publish` | `PolicyPublishResult` |
 | `getPolicyLastPublish()` | `GET /v1/org/policy/last-publish` | `PolicyLastPublish \| null` |
-| `listRules()` *(legacy)* | `GET /v1/org/rules` | `OrgRule[]` |
-| `getRule(id)` *(legacy)* | `GET /v1/org/rules/{id}` | `OrgRule` |
-| `createRule(input)` *(deprecated — 410 on cloud)* | `POST /v1/org/rules` | `OrgRule` |
-| `updateRule(id, input)` *(deprecated — 410 on cloud)* | `PATCH /v1/org/rules/{id}` | `{ success: boolean }` |
-| `deleteRule(id)` *(deprecated — 410 on cloud)* | `DELETE /v1/org/rules/{id}` | `void` |
+| `getEffectiveAppPermissions({provider})` | `GET /v1/org/policy/effective-app-permissions` | `EffectiveAppPermissions` |
 | `configureManualApproval(cb, options?)` | `GET /v1/org/approvals/pending` (long-poll) | `ManualApprovalHandle` |
 
 ---

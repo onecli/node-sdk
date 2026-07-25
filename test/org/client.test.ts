@@ -179,129 +179,81 @@ describe("OrgClient connections", () => {
   });
 });
 
-describe("OrgClient rules", () => {
-  it("creates an org rule", async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
-        new Response(JSON.stringify({ id: "r1", name: "block sends" }), {
-          status: 201,
-        }),
-      );
-
-    const rule = await client().createRule({
-      name: "block sends",
-      hostPattern: "gmail.googleapis.com",
-      action: "block",
-      enabled: true,
-    });
-
-    expect(rule.id).toBe("r1");
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "http://localhost:3000/v1/org/rules",
-      expect.objectContaining({ method: "POST" }),
-    );
-  });
-
-  it("decodes mixed rule listings: masked app-permission rules + custom rules", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+describe("OrgClient effective app permissions", () => {
+  it("reads the org reflection on the canonical path", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify([
-          {
-            id: "app-1",
-            name: "Gmail: Send email",
-            action: "manual_approval",
-            enabled: true,
-            rateLimit: null,
-            rateLimitWindow: null,
-            scope: "organization",
-            metadata: {
-              source: "app_permission",
-              provider: "gmail",
-              toolId: "send_email",
+        JSON.stringify({
+          provider: "gmail",
+          basis: { agentId: null, credentialAttached: true, scope: "organization" },
+          variesByIdentity: 2,
+          groups: [
+            {
+              category: "write",
+              verdict: "mixed",
+              tools: [
+                {
+                  toolId: "send_email",
+                  verdict: "blocked",
+                  rateLimit: null,
+                  rateLimitWindow: null,
+                  decidedBy: {
+                    scope: "organization",
+                    rule: { logicalId: "l1", name: "No sends" },
+                  },
+                },
+              ],
             },
-            createdAt: "2026-07-04T00:00:00Z",
-          },
-          {
-            id: "custom-1",
-            name: "Block deletes",
-            hostPattern: "api.example.com",
-            pathPattern: "/v1/*",
-            method: "DELETE",
-            action: "block",
-            enabled: true,
-            rateLimit: null,
-            rateLimitWindow: null,
-            scope: "organization",
-            metadata: null,
-            createdAt: "2026-07-04T00:00:00Z",
-          },
-        ]),
+          ],
+        }),
         { status: 200 },
       ),
     );
 
-    const rules = await client().listRules();
-
-    const appRule = rules[0]!;
-    expect(appRule.hostPattern).toBeUndefined();
-    expect(appRule.pathPattern).toBeUndefined();
-    expect(appRule.method).toBeUndefined();
-    expect(appRule.metadata).toEqual({
-      source: "app_permission",
+    const result = await client().getEffectiveAppPermissions({
       provider: "gmail",
-      toolId: "send_email",
     });
 
-    const custom = rules[1]!;
-    expect(custom.hostPattern).toBe("api.example.com");
-    expect(custom.pathPattern).toBe("/v1/*");
-    expect(custom.method).toBe("DELETE");
+    expect(result.provider).toBe("gmail");
+    expect(result.groups[0]!.tools[0]!.verdict).toBe("blocked");
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:3000/v1/org/policy/effective-app-permissions?provider=gmail",
+      expect.objectContaining({ method: "GET" }),
+    );
   });
 
-  it("lists, gets, updates, and deletes rules on the canonical paths", async () => {
+  it("url-encodes the provider", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockImplementation(async () => {
-        const call = fetchSpy.mock.calls.at(-1);
-        const isDelete =
-          (call?.[1] as { method?: string } | undefined)?.method === "DELETE";
-        return isDelete
-          ? new Response(null, { status: 204 })
-          : new Response(JSON.stringify({ success: true }), { status: 200 });
-      });
+      .mockResolvedValue(new Response(JSON.stringify({}), { status: 200 }));
 
-    await client().updateRule("r1", { enabled: false, pathPattern: null });
-    await client().listRules();
-    await client().getRule("r1");
-    await client().deleteRule("r1");
+    await client().getEffectiveAppPermissions({ provider: "a/b?c" });
 
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      1,
-      "http://localhost:3000/v1/org/rules/r1",
-      expect.objectContaining({
-        method: "PATCH",
-        body: JSON.stringify({ enabled: false, pathPattern: null }),
-      }),
-    );
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      2,
-      "http://localhost:3000/v1/org/rules",
-      expect.objectContaining({ method: "GET" }),
-    );
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      3,
-      "http://localhost:3000/v1/org/rules/r1",
-      expect.objectContaining({ method: "GET" }),
-    );
-    expect(fetchSpy).toHaveBeenNthCalledWith(
-      4,
-      "http://localhost:3000/v1/org/rules/r1",
-      expect.objectContaining({ method: "DELETE" }),
+    expect(fetchSpy.mock.calls[0]![0]).toBe(
+      "http://localhost:3000/v1/org/policy/effective-app-permissions?provider=a%2Fb%3Fc",
     );
   });
 });
 
+describe("the retired legacy rule surface", () => {
+  it("is gone from the client — those endpoints answer 410 now", () => {
+    // Cloud PR #709 deleted /v1/org/rules. Keeping methods that can only throw
+    // would be worse than removing them, so this pins their absence: the
+    // replacement is the *PolicyRule family plus the reflection above.
+    const c = client() as unknown as Record<string, unknown>;
+    for (const gone of [
+      "listRules",
+      "getRule",
+      "createRule",
+      "updateRule",
+      "deleteRule",
+    ]) {
+      expect(c[gone]).toBeUndefined();
+    }
+    expect(typeof c.listPolicyRules).toBe("function");
+    expect(typeof c.getEffectiveAppPermissions).toBe("function");
+  });
+});
 describe("OneCLI facade", () => {
   it("exposes the org sub-client", () => {
     const onecli = new OneCLI({

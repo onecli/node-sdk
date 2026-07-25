@@ -433,3 +433,113 @@ describe("AgentsClient", () => {
     });
   });
 });
+
+describe("read-only policy reflections", () => {
+  // These replace the retired per-agent equipment reads. The property that
+  // matters is the PATH — a wrong one silently returns another resource's shape
+  // or a 404, and the old paths are 410 now.
+  let spy: ReturnType<typeof vi.spyOn>;
+  afterEach(() => spy?.mockRestore());
+
+  const client = () =>
+    new AgentsClient("http://localhost:3000", "oc_test", 5000, null);
+
+  // A Response body can only be read once, so mint a fresh one per call —
+  // mockResolvedValue would hand the same exhausted object to a second call.
+  const arm = (body: unknown) => {
+    spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(
+        async () => new Response(JSON.stringify(body), { status: 200 }),
+      );
+  };
+
+  it("getEffectiveCredentials hits the agent reflection and decodes both arms", async () => {
+    arm({
+      agentId: "a1",
+      mode: "selective",
+      secrets: [
+        {
+          kind: "secret",
+          id: "s1",
+          name: "Anthropic key",
+          host: "api.anthropic.com",
+          status: "usable",
+          provenance: [
+            {
+              kind: "rule",
+              scope: "project",
+              rule: { logicalId: "l1", name: "Anthropic key" },
+            },
+          ],
+        },
+      ],
+      connections: [],
+    });
+
+    const result = await client().getEffectiveCredentials("a1");
+
+    expect(result.mode).toBe("selective");
+    expect(result.secrets[0]!.kind).toBe("secret");
+    expect(spy).toHaveBeenCalledWith(
+      "http://localhost:3000/v1/agents/a1/effective-credentials",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("getConnectionAgentAccess hits the connection reflection", async () => {
+    arm({ connectionId: "c1", provider: "github", catalog: true, agents: [] });
+
+    const result = await client().getConnectionAgentAccess("c1");
+
+    expect(result.provider).toBe("github");
+    expect(spy).toHaveBeenCalledWith(
+      "http://localhost:3000/v1/connections/c1/effective-agents",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("listAppPermissionDefinitions hits the catalog", async () => {
+    arm([{ provider: "gmail", groups: [] }]);
+
+    const result = await client().listAppPermissionDefinitions();
+
+    expect(result[0]!.provider).toBe("gmail");
+    expect(spy).toHaveBeenCalledWith(
+      "http://localhost:3000/v1/apps/permission-definitions",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("getEffectiveAppPermissions hits the PROJECT reflection, agentId optional", async () => {
+    arm({ provider: "gmail", basis: { agentId: null, credentialAttached: true, scope: "project" }, variesByIdentity: 0, groups: [] });
+    await client().getEffectiveAppPermissions({ provider: "gmail" });
+    expect(spy.mock.calls[0]![0]).toBe(
+      "http://localhost:3000/v1/policy/effective-app-permissions?provider=gmail",
+    );
+
+    spy.mockClear();
+    await client().getEffectiveAppPermissions({ provider: "gmail", agentId: "a1" });
+    expect(spy.mock.calls[0]![0]).toBe(
+      "http://localhost:3000/v1/policy/effective-app-permissions?provider=gmail&agentId=a1",
+    );
+  });
+
+  it("url-encodes ids so a slash cannot escape the path", async () => {
+    arm({});
+    await client().getEffectiveCredentials("a/../b");
+    expect(spy.mock.calls[0]![0]).toBe(
+      "http://localhost:3000/v1/agents/a%2F..%2Fb/effective-credentials",
+    );
+  });
+
+  it("maps a non-2xx to OneCLIRequestError with the status", async () => {
+    spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("gone", { status: 410 }));
+
+    await expect(client().getEffectiveCredentials("a1")).rejects.toThrow(
+      OneCLIRequestError,
+    );
+  });
+});
