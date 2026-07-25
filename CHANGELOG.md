@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/onecli/node-sdk/compare/v2.8.0...v3.0.0) (2026-07-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* org.listRules, org.getRule, org.createRule, org.updateRule and org.deleteRule are removed along with the OrgRule* and *OrgRuleInput types. Use the *PolicyRule methods to author rules and org.getEffectiveAppPermissions to read what they permit.
+
+### Features
+
+* retire the legacy org rules API, expose the policy reflections ([#54](https://github.com/onecli/node-sdk/issues/54)) ([25596d7](https://github.com/onecli/node-sdk/commit/25596d7e66a5d1b95940fd199ac1dc93fa771fea))
+
 ## [2.8.0](https://github.com/onecli/node-sdk/compare/v2.7.0...v2.8.0) (2026-07-21)
 
 
