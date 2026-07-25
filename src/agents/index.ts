@@ -7,6 +7,7 @@ import type {
   Agent,
   AppPermissionDefinition,
   ConnectionAgentAccess,
+  EffectiveAppPermissions,
   CreateAgentInput,
   CreateAgentResponse,
   EffectiveCredentials,
@@ -167,6 +168,25 @@ export class AgentsClient {
       `/v1/agents/${encodeURIComponent(agentId)}/effective-credentials`,
       options,
     );
+
+  /**
+   * What the project's published policy allows for an app, per tool. Omit
+   * `agentId` for the all-agents baseline.
+   *
+   * The project-scope twin of `org.getEffectiveAppPermissions`, and the
+   * replacement for the retired `/v1/rules/permissions/:provider`.
+   */
+  getEffectiveAppPermissions = async (
+    input: { provider: string; agentId?: string },
+    options?: RequestOptions,
+  ): Promise<EffectiveAppPermissions> => {
+    const query = new URLSearchParams({ provider: input.provider });
+    if (input.agentId) query.set("agentId", input.agentId);
+    return this.getJson<EffectiveAppPermissions>(
+      `/v1/policy/effective-app-permissions?${query.toString()}`,
+      options,
+    );
+  };
 
   /**
    * Which agents can reach a connection, and what each can do with it.

@@ -51,7 +51,7 @@ export type {
   GetOrgAuthorizeUrlOptions,
   OrgConnection,
   OrgPolicyRule,
-  OrgEffectiveAppPermissions,
+  EffectiveAppPermissions,
   EffectiveTool,
   EffectiveToolGroup,
   EffectiveToolVerdict,

@@ -127,3 +127,11 @@ export interface AppPermissionDefinition {
     tools: { id: string; name: string; description?: string }[];
   }[];
 }
+
+export type {
+  EffectiveAppPermissions,
+  EffectiveProvenance,
+  EffectiveTool,
+  EffectiveToolGroup,
+  EffectiveToolVerdict,
+} from "../org/types.js";

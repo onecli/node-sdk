@@ -444,10 +444,14 @@ describe("read-only policy reflections", () => {
   const client = () =>
     new AgentsClient("http://localhost:3000", "oc_test", 5000, null);
 
+  // A Response body can only be read once, so mint a fresh one per call —
+  // mockResolvedValue would hand the same exhausted object to a second call.
   const arm = (body: unknown) => {
     spy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(JSON.stringify(body), { status: 200 }));
+      .mockImplementation(
+        async () => new Response(JSON.stringify(body), { status: 200 }),
+      );
   };
 
   it("getEffectiveCredentials hits the agent reflection and decodes both arms", async () => {
@@ -507,6 +511,20 @@ describe("read-only policy reflections", () => {
     );
   });
 
+  it("getEffectiveAppPermissions hits the PROJECT reflection, agentId optional", async () => {
+    arm({ provider: "gmail", basis: { agentId: null, credentialAttached: true, scope: "project" }, variesByIdentity: 0, groups: [] });
+    await client().getEffectiveAppPermissions({ provider: "gmail" });
+    expect(spy.mock.calls[0]![0]).toBe(
+      "http://localhost:3000/v1/policy/effective-app-permissions?provider=gmail",
+    );
+
+    spy.mockClear();
+    await client().getEffectiveAppPermissions({ provider: "gmail", agentId: "a1" });
+    expect(spy.mock.calls[0]![0]).toBe(
+      "http://localhost:3000/v1/policy/effective-app-permissions?provider=gmail&agentId=a1",
+    );
+  });
+
   it("url-encodes ids so a slash cannot escape the path", async () => {
     arm({});
     await client().getEffectiveCredentials("a/../b");
@@ -525,4 +543,3 @@ describe("read-only policy reflections", () => {
     );
   });
 });
-

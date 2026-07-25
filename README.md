@@ -246,6 +246,19 @@ Those returned a stored assignment list; this returns the **effective** set, so 
 credential granted by a policy rule appears here even though no assignment row
 exists for it.
 
+#### `onecli.getEffectiveAppPermissions({ provider, agentId? }, options?)`
+
+What the project's published policy allows for an app, per tool. Omit `agentId`
+for the all-agents baseline. The project-scope twin of
+`onecli.org.getEffectiveAppPermissions`, and the replacement for the retired
+`GET /v1/rules/permissions/{provider}`.
+
+```ts
+const { groups, variesByIdentity } = await onecli.getEffectiveAppPermissions({
+  provider: "gmail",
+});
+```
+
 #### `onecli.getConnectionAgentAccess(connectionId, options?)`
 
 Which agents can reach a connection, and what each can do with it. Replaces the
@@ -483,7 +496,7 @@ identified by `metadata.provider` + `metadata.toolId`.
 | `getPolicyDefault(status?)` / `setPolicyDefault(action, opts?)` | `GET`/`PATCH /v1/org/policy/default` | `OrgPolicyRule` / `PolicyWriteResult<OrgPolicyRule>` |
 | `publishPolicy()` | `POST /v1/org/policy/publish` | `PolicyPublishResult` |
 | `getPolicyLastPublish()` | `GET /v1/org/policy/last-publish` | `PolicyLastPublish \| null` |
-| `getEffectiveAppPermissions({provider})` | `GET /v1/org/policy/effective-app-permissions` | `OrgEffectiveAppPermissions` |
+| `getEffectiveAppPermissions({provider})` | `GET /v1/org/policy/effective-app-permissions` | `EffectiveAppPermissions` |
 | `configureManualApproval(cb, options?)` | `GET /v1/org/approvals/pending` (long-poll) | `ManualApprovalHandle` |
 
 ---

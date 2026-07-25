@@ -15,6 +15,7 @@ import type {
   AppPermissionDefinition,
   ConnectionAgentAccess,
   CreateAgentInput,
+  EffectiveAppPermissions,
   CreateAgentResponse,
   EffectiveCredentials,
   EnsureAgentResponse,
@@ -138,6 +139,17 @@ export class OneCLI {
     options?: RequestOptions,
   ): Promise<EffectiveCredentials> => {
     return this.agentsClient.getEffectiveCredentials(agentId, options);
+  };
+
+  /**
+   * What the project's published policy allows for an app, per tool.
+   * Replaces the retired `GET /v1/rules/permissions/:provider`.
+   */
+  getEffectiveAppPermissions = (
+    input: { provider: string; agentId?: string },
+    options?: RequestOptions,
+  ): Promise<EffectiveAppPermissions> => {
+    return this.agentsClient.getEffectiveAppPermissions(input, options);
   };
 
   /**

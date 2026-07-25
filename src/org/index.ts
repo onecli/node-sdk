@@ -14,7 +14,7 @@ import type {
   CreateOrgPolicyRuleInput,
   GetOrgAuthorizeUrlOptions,
   OrgConnection,
-  OrgEffectiveAppPermissions,
+  EffectiveAppPermissions,
   OrgPolicyRule,
   PolicyLastPublish,
   PolicyPublishResult,
@@ -253,8 +253,8 @@ export class OrgClient {
    */
   getEffectiveAppPermissions = async (
     input: { provider: string },
-  ): Promise<OrgEffectiveAppPermissions> => {
-    return this.request<OrgEffectiveAppPermissions>(
+  ): Promise<EffectiveAppPermissions> => {
+    return this.request<EffectiveAppPermissions>(
       "GET",
       `/v1/org/policy/effective-app-permissions?provider=${encodeURIComponent(input.provider)}`,
     );
