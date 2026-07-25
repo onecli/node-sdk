@@ -12,11 +12,10 @@ import type {
 import type {
   ConnectOrgAppInput,
   CreateOrgPolicyRuleInput,
-  CreateOrgRuleInput,
   GetOrgAuthorizeUrlOptions,
   OrgConnection,
+  OrgEffectiveAppPermissions,
   OrgPolicyRule,
-  OrgRule,
   PolicyLastPublish,
   PolicyPublishResult,
   PolicyRuleAction,
@@ -24,7 +23,6 @@ import type {
   PolicyWriteOptions,
   PolicyWriteResult,
   UpdateOrgPolicyRuleInput,
-  UpdateOrgRuleInput,
 } from "./types.js";
 
 const CLOUD_OR_ENTERPRISE_HINT =
@@ -249,60 +247,16 @@ export class OrgClient {
   };
 
   /**
-   * List the organization's policy rules (applied to every agent in the org).
+   * The org's effective app permissions for a provider — what the published
+   * policy actually allows, per tool. Read-only; the replacement for the
+   * retired `/v1/org/rules/permissions/:provider` surface.
    */
-  listRules = async (): Promise<OrgRule[]> => {
-    return this.request<OrgRule[]>("GET", "/v1/org/rules");
-  };
-
-  /**
-   * Get a single organization rule.
-   */
-  getRule = async (ruleId: string): Promise<OrgRule> => {
-    return this.request<OrgRule>(
+  getEffectiveAppPermissions = async (
+    input: { provider: string },
+  ): Promise<OrgEffectiveAppPermissions> => {
+    return this.request<OrgEffectiveAppPermissions>(
       "GET",
-      `/v1/org/rules/${encodeURIComponent(ruleId)}`,
-    );
-  };
-
-  /**
-   * Create an organization rule.
-   *
-   * @deprecated Cloud deployments reject this write with 410 Gone — use
-   * {@link createPolicyRule}. Pre-cutover self-hosted servers still accept it.
-   */
-  createRule = async (input: CreateOrgRuleInput): Promise<OrgRule> => {
-    return this.request<OrgRule>("POST", "/v1/org/rules", input);
-  };
-
-  /**
-   * Update an organization rule. Nullable fields accept an explicit `null`
-   * to clear the stored value.
-   *
-   * @deprecated Cloud deployments reject this write with 410 Gone — use
-   * {@link updatePolicyRule}. Pre-cutover self-hosted servers still accept it.
-   */
-  updateRule = async (
-    ruleId: string,
-    input: UpdateOrgRuleInput,
-  ): Promise<{ success: boolean }> => {
-    return this.request<{ success: boolean }>(
-      "PATCH",
-      `/v1/org/rules/${encodeURIComponent(ruleId)}`,
-      input,
-    );
-  };
-
-  /**
-   * Delete an organization rule.
-   *
-   * @deprecated Cloud deployments reject this write with 410 Gone — use
-   * {@link deletePolicyRule}. Pre-cutover self-hosted servers still accept it.
-   */
-  deleteRule = async (ruleId: string): Promise<void> => {
-    await this.request<undefined>(
-      "DELETE",
-      `/v1/org/rules/${encodeURIComponent(ruleId)}`,
+      `/v1/org/policy/effective-app-permissions?provider=${encodeURIComponent(input.provider)}`,
     );
   };
 

@@ -296,3 +296,59 @@ export interface PolicyLastPublish {
   appliedAt: string;
   appliedBy: { name: string | null; email: string } | null;
 }
+
+// ── Effective app permissions (the read-only policy reflection) ─────────────
+//
+// Replaces the retired `/v1/org/rules/permissions/:provider` surface. This is a
+// REFLECTION, not an editor: it reports what the org's published policy actually
+// allows per tool. Author changes with the `*PolicyRule` methods.
+
+/** What the published policy does to one tool. `mixed` appears only on a group
+ * rollup, where the group's tools disagree. */
+export type EffectiveToolVerdict =
+  | "allowed"
+  | "blocked"
+  | "needsApproval"
+  | "rateLimited"
+  | "unmanaged"
+  | "mixed";
+
+/** Which rule decided, when one did. An org rule's NAME is visible only to org
+ * admins; other viewers get `redacted: true` with the name withheld. */
+export type EffectiveProvenance =
+  | { scope: "organization"; redacted: true }
+  | {
+      scope: "organization" | "project";
+      rule: { logicalId: string; name: string };
+    };
+
+export interface EffectiveTool {
+  toolId: string;
+  verdict: EffectiveToolVerdict;
+  rateLimit: number | null;
+  rateLimitWindow: string | null;
+  /** Null when the tool's variants disagree, or when it is allowed purely by an
+   * allow-posture default rather than a specific rule. */
+  decidedBy: EffectiveProvenance | null;
+}
+
+export interface EffectiveToolGroup {
+  category: "read" | "write";
+  /** The rollup: the tools' common verdict, else `mixed`. */
+  verdict: EffectiveToolVerdict;
+  tools: EffectiveTool[];
+}
+
+export interface OrgEffectiveAppPermissions {
+  provider: string;
+  basis: {
+    /** Null = the agent-less baseline; only any-identity rules are applied. */
+    agentId: string | null;
+    credentialAttached: boolean;
+    scope: "organization" | "project";
+  };
+  /** Count of identity-scoped rules the baseline view cannot show, because they
+   * match only specific agents or groups. */
+  variesByIdentity: number;
+  groups: EffectiveToolGroup[];
+}

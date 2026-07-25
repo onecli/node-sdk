@@ -12,8 +12,11 @@ import type {
 } from "./container/types.js";
 import type {
   Agent,
+  AppPermissionDefinition,
+  ConnectionAgentAccess,
   CreateAgentInput,
   CreateAgentResponse,
+  EffectiveCredentials,
   EnsureAgentResponse,
 } from "./agents/types.js";
 import type {
@@ -123,6 +126,41 @@ export class OneCLI {
   /**
    * Ensure an agent exists. Creates it if missing, returns normally if it already exists.
    */
+  /**
+   * Which credentials this agent can actually use, and what each one can do
+   * under the published policy. Read-only.
+   *
+   * Replaces the retired `GET /v1/agents/:id/{secrets,connections}` reads —
+   * those returned a stored assignment list, this returns the EFFECTIVE set.
+   */
+  getEffectiveCredentials = (
+    agentId: string,
+    options?: RequestOptions,
+  ): Promise<EffectiveCredentials> => {
+    return this.agentsClient.getEffectiveCredentials(agentId, options);
+  };
+
+  /**
+   * Which agents can reach a connection, and what each can do with it.
+   * Replaces the retired `GET /v1/connections/:id/agents`.
+   */
+  getConnectionAgentAccess = (
+    connectionId: string,
+    options?: RequestOptions,
+  ): Promise<ConnectionAgentAccess> => {
+    return this.agentsClient.getConnectionAgentAccess(connectionId, options);
+  };
+
+  /**
+   * Every provider's public tool catalog — the tool ids an `app`-target policy
+   * rule can name.
+   */
+  listAppPermissionDefinitions = (
+    options?: RequestOptions,
+  ): Promise<AppPermissionDefinition[]> => {
+    return this.agentsClient.listAppPermissionDefinitions(options);
+  };
+
   ensureAgent = (
     input: CreateAgentInput,
     options?: RequestOptions,
