@@ -5,8 +5,12 @@ import {
 } from "../errors.js";
 import type {
   Agent,
+  AgentGrants,
+  AgentWithGrantsSummary,
   AppPermissionDefinition,
   ConnectionAgentAccess,
+  ConnectionGrantInput,
+  ConnectionGrants,
   EffectiveAppPermissions,
   CreateAgentInput,
   CreateAgentResponse,
@@ -14,6 +18,22 @@ import type {
   EnsureAgentResponse,
 } from "./types.js";
 import type { RequestOptions } from "../request-options.js";
+
+/** Extract the server error-envelope message from a response body, if any. */
+const parseErrorEnvelope = (body: string): string | null => {
+  try {
+    const parsed = JSON.parse(body) as {
+      error?: { message?: string } | string;
+    };
+    if (typeof parsed.error === "string") return parsed.error;
+    if (parsed.error && typeof parsed.error.message === "string") {
+      return parsed.error.message;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
 
 export class AgentsClient {
   private baseUrl: string;
@@ -86,24 +106,57 @@ export class AgentsClient {
   /**
    * List all agents in the project.
    */
-  listAgents = async (options?: RequestOptions): Promise<Agent[]> => {
-    const url = `${this.baseUrl}/v1/agents`;
+  listAgents = async (options?: RequestOptions): Promise<Agent[]> =>
+    this.request<Agent[]>("GET", "/v1/agents", undefined, options);
+
+  /**
+   * List all agents with each one's attach summary — its granted connections,
+   * secrets, and LLM keys (`GET /v1/agents?include=grants-summary`).
+   */
+  listAgentsWithGrants = async (
+    options?: RequestOptions,
+  ): Promise<AgentWithGrantsSummary[]> =>
+    this.request<AgentWithGrantsSummary[]>(
+      "GET",
+      "/v1/agents?include=grants-summary",
+      undefined,
+      options,
+    );
+
+  /**
+   * Shared request path. Non-2xx responses surface the server's error-envelope
+   * message when one exists (`{ error: { message } }` or `{ error: "..." }`) —
+   * a 410's pointer at the replacement endpoint, a 422's validation law —
+   * instead of a bare status line. 204 responses resolve to undefined.
+   */
+  private request = async <T>(
+    method: "GET" | "PUT" | "DELETE",
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ): Promise<T> => {
+    const url = `${this.baseUrl}${path}`;
 
     try {
       const res = await fetch(url, {
-        method: "GET",
+        method,
         headers: this.buildHeaders(options),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         signal: AbortSignal.timeout(this.timeout),
       });
 
       if (!res.ok) {
+        const detail = parseErrorEnvelope(await res.text().catch(() => ""));
         throw new OneCLIRequestError(
-          `OneCLI returned ${res.status} ${res.statusText}`,
+          detail ?? `OneCLI returned ${res.status} ${res.statusText}`,
           { url, statusCode: res.status },
         );
       }
 
-      return (await res.json()) as Agent[];
+      if (res.status === 204) {
+        return undefined as T;
+      }
+      return (await res.json()) as T;
     } catch (error) {
       if (
         error instanceof OneCLIError ||
@@ -122,34 +175,103 @@ export class AgentsClient {
   private getJson = async <T>(
     path: string,
     options?: RequestOptions,
-  ): Promise<T> => {
-    const url = `${this.baseUrl}${path}`;
+  ): Promise<T> => this.request<T>("GET", path, undefined, options);
 
-    try {
-      const res = await fetch(url, {
-        method: "GET",
-        headers: this.buildHeaders(options),
-        signal: AbortSignal.timeout(this.timeout),
-      });
+  /**
+   * The agent's grants: its attached app connections (with per-tool access)
+   * and secrets. Grants are attach INTENT — `getEffectiveCredentials` is the
+   * effective view with organization guardrails applied.
+   */
+  getAgentGrants = async (
+    agentId: string,
+    options?: RequestOptions,
+  ): Promise<AgentGrants> =>
+    this.request<AgentGrants>(
+      "GET",
+      `/v1/agents/${encodeURIComponent(agentId)}/grants`,
+      undefined,
+      options,
+    );
 
-      if (!res.ok) {
-        throw new OneCLIRequestError(
-          `OneCLI returned ${res.status} ${res.statusText}`,
-          { url, statusCode: res.status },
-        );
-      }
+  /**
+   * Attach an app connection to the agent, or replace its per-tool access.
+   * Returns the agent's fresh grant set. Idempotent — an identical desired
+   * state writes nothing and still returns 200.
+   */
+  setConnectionGrant = async (
+    agentId: string,
+    connectionId: string,
+    input: ConnectionGrantInput,
+    options?: RequestOptions,
+  ): Promise<AgentGrants> =>
+    this.request<AgentGrants>(
+      "PUT",
+      `/v1/agents/${encodeURIComponent(agentId)}/grants/connections/${encodeURIComponent(connectionId)}`,
+      input,
+      options,
+    );
 
-      return (await res.json()) as T;
-    } catch (error) {
-      if (
-        error instanceof OneCLIError ||
-        error instanceof OneCLIRequestError
-      ) {
-        throw error;
-      }
-      throw toOneCLIError(error);
-    }
-  };
+  /**
+   * Detach an app connection from the agent (204; resolves to void). Also the
+   * only way to express "no tools at all" — the server rejects an all-blocked
+   * custom grant with 422.
+   */
+  removeConnectionGrant = async (
+    agentId: string,
+    connectionId: string,
+    options?: RequestOptions,
+  ): Promise<void> =>
+    this.request<void>(
+      "DELETE",
+      `/v1/agents/${encodeURIComponent(agentId)}/grants/connections/${encodeURIComponent(connectionId)}`,
+      undefined,
+      options,
+    );
+
+  /**
+   * Attach a secret or LLM key to the agent. Secrets have no per-tool axis —
+   * the PUT takes no body. Returns the agent's fresh grant set.
+   */
+  attachSecret = async (
+    agentId: string,
+    secretId: string,
+    options?: RequestOptions,
+  ): Promise<AgentGrants> =>
+    this.request<AgentGrants>(
+      "PUT",
+      `/v1/agents/${encodeURIComponent(agentId)}/grants/secrets/${encodeURIComponent(secretId)}`,
+      undefined,
+      options,
+    );
+
+  /** Detach a secret from the agent (204; resolves to void). */
+  detachSecret = async (
+    agentId: string,
+    secretId: string,
+    options?: RequestOptions,
+  ): Promise<void> =>
+    this.request<void>(
+      "DELETE",
+      `/v1/agents/${encodeURIComponent(agentId)}/grants/secrets/${encodeURIComponent(secretId)}`,
+      undefined,
+      options,
+    );
+
+  /**
+   * Which agents a connection is granted to (attach intent, read-only).
+   * The connection-side writes are the same server operations as
+   * `setConnectionGrant`/`removeConnectionGrant` — use those.
+   */
+  getConnectionGrants = async (
+    connectionId: string,
+    options?: RequestOptions,
+  ): Promise<ConnectionGrants> =>
+    this.request<ConnectionGrants>(
+      "GET",
+      `/v1/connections/${encodeURIComponent(connectionId)}/grants`,
+      undefined,
+      options,
+    );
 
   /**
    * Which credentials this agent can actually use, and what each one can do

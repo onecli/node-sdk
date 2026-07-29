@@ -12,8 +12,12 @@ import type {
 } from "./container/types.js";
 import type {
   Agent,
+  AgentGrants,
+  AgentWithGrantsSummary,
   AppPermissionDefinition,
   ConnectionAgentAccess,
+  ConnectionGrantInput,
+  ConnectionGrants,
   CreateAgentInput,
   EffectiveAppPermissions,
   CreateAgentResponse,
@@ -112,6 +116,92 @@ export class OneCLI {
    */
   listAgents = (options?: RequestOptions): Promise<Agent[]> => {
     return this.agentsClient.listAgents(options);
+  };
+
+  /**
+   * List all agents with each one's attach summary — its granted connections,
+   * secrets, and LLM keys.
+   */
+  listAgentsWithGrants = (
+    options?: RequestOptions,
+  ): Promise<AgentWithGrantsSummary[]> => {
+    return this.agentsClient.listAgentsWithGrants(options);
+  };
+
+  /**
+   * The agent's grants: its attached app connections (with per-tool access)
+   * and secrets. Grants are attach INTENT — `getEffectiveCredentials` is the
+   * effective view with organization guardrails applied.
+   */
+  getAgentGrants = (
+    agentId: string,
+    options?: RequestOptions,
+  ): Promise<AgentGrants> => {
+    return this.agentsClient.getAgentGrants(agentId, options);
+  };
+
+  /**
+   * Attach an app connection to the agent, or replace its per-tool access.
+   * Returns the agent's fresh grant set.
+   */
+  setConnectionGrant = (
+    agentId: string,
+    connectionId: string,
+    input: ConnectionGrantInput,
+    options?: RequestOptions,
+  ): Promise<AgentGrants> => {
+    return this.agentsClient.setConnectionGrant(
+      agentId,
+      connectionId,
+      input,
+      options,
+    );
+  };
+
+  /**
+   * Detach an app connection from the agent (204; resolves to void).
+   */
+  removeConnectionGrant = (
+    agentId: string,
+    connectionId: string,
+    options?: RequestOptions,
+  ): Promise<void> => {
+    return this.agentsClient.removeConnectionGrant(
+      agentId,
+      connectionId,
+      options,
+    );
+  };
+
+  /**
+   * Attach a secret or LLM key to the agent (no request body — secrets have
+   * no per-tool axis). Returns the agent's fresh grant set.
+   */
+  attachSecret = (
+    agentId: string,
+    secretId: string,
+    options?: RequestOptions,
+  ): Promise<AgentGrants> => {
+    return this.agentsClient.attachSecret(agentId, secretId, options);
+  };
+
+  /** Detach a secret from the agent (204; resolves to void). */
+  detachSecret = (
+    agentId: string,
+    secretId: string,
+    options?: RequestOptions,
+  ): Promise<void> => {
+    return this.agentsClient.detachSecret(agentId, secretId, options);
+  };
+
+  /**
+   * Which agents a connection is granted to (attach intent, read-only).
+   */
+  getConnectionGrants = (
+    connectionId: string,
+    options?: RequestOptions,
+  ): Promise<ConnectionGrants> => {
+    return this.agentsClient.getConnectionGrants(connectionId, options);
   };
 
   /**

@@ -1,0 +1,11 @@
+{
+  // Typecheck config covering the tests too — `tsconfig.json` stays src-only
+  // because tsup's dts build derives its output layout from its rootDir.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src", "test"],
+  "exclude": ["node_modules", "lib"]
+}

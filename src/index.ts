@@ -31,7 +31,31 @@ export type {
   CredentialProvenance,
   EffectiveCredential,
   EffectiveCredentials,
+  AgentGrants,
+  AgentGrantConnection,
+  AgentGrantSecret,
+  AgentGrantsSummary,
+  AgentWithGrantsSummary,
+  ConnectionGrantInput,
+  ConnectionGrants,
+  GrantsSummaryEntry,
 } from "./agents/types.js";
+export {
+  CONNECTION_ID_HEADER,
+  CONNECTIONS_HEADER,
+  parseGatewayError,
+} from "./gateway/types.js";
+export type {
+  AccessRestrictedError,
+  BlockedByDefaultPolicyError,
+  BlockedByPolicyError,
+  ConnectionNotFoundError,
+  CredentialNotFoundError,
+  GatewayConnectionChoice,
+  GatewayError,
+  MultipleConnectionsError,
+  MultipleProvidersError,
+} from "./gateway/types.js";
 export type {
   ApprovalRequest,
   ApprovalSummary,
@@ -51,6 +75,9 @@ export type {
   GetOrgAuthorizeUrlOptions,
   OrgConnection,
   OrgPolicyRule,
+  OrgRuleCondition,
+  OrgRuleMethod,
+  OrgRuleRateLimitWindow,
   EffectiveAppPermissions,
   EffectiveTool,
   EffectiveToolGroup,

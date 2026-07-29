@@ -193,4 +193,58 @@ describe("OneCLI", () => {
       fetchSpy.mockRestore();
     });
   });
+
+  describe("grants facade", () => {
+    // The README documents these on OneCLI itself — a method that exists only
+    // on AgentsClient is invisible to users of `new OneCLI()`.
+    it("exposes and delegates every grants method", async () => {
+      const grants = {
+        agentId: "a1",
+        mode: "grants",
+        connections: [],
+        secrets: [],
+      };
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(
+          async () => new Response(JSON.stringify(grants), { status: 200 }),
+        );
+
+      const oc = new OneCLI({ apiKey: "oc_test", url: "http://localhost:3000" });
+      await oc.getAgentGrants("a1");
+      await oc.setConnectionGrant("a1", "c1", { access: "full" });
+      await oc.attachSecret("a1", "s1");
+      await oc.getConnectionGrants("c1");
+      await oc.listAgentsWithGrants().catch(() => undefined); // array-shaped; delegation is what's pinned
+
+      const urls = fetchSpy.mock.calls.map((c) => String(c[0]));
+      expect(urls).toContain("http://localhost:3000/v1/agents/a1/grants");
+      expect(urls).toContain(
+        "http://localhost:3000/v1/agents/a1/grants/connections/c1",
+      );
+      expect(urls).toContain(
+        "http://localhost:3000/v1/agents/a1/grants/secrets/s1",
+      );
+      expect(urls).toContain("http://localhost:3000/v1/connections/c1/grants");
+      expect(urls).toContain(
+        "http://localhost:3000/v1/agents?include=grants-summary",
+      );
+      fetchSpy.mockRestore();
+    });
+
+    it("exposes and delegates both detach methods (204)", async () => {
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(async () => new Response(null, { status: 204 }));
+
+      const oc = new OneCLI({ apiKey: "oc_test", url: "http://localhost:3000" });
+      await expect(oc.removeConnectionGrant("a1", "c1")).resolves.toBeUndefined();
+      await expect(oc.detachSecret("a1", "s1")).resolves.toBeUndefined();
+      expect(fetchSpy.mock.calls.map((c) => (c[1] as RequestInit).method)).toEqual([
+        "DELETE",
+        "DELETE",
+      ]);
+      fetchSpy.mockRestore();
+    });
+  });
 });

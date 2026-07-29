@@ -43,6 +43,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000///",
         "oc_test",
         5000,
+        null,
       );
       client.getContainerConfig();
 
@@ -63,6 +64,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_mykey",
         5000,
+        null,
       );
       await client.getContainerConfig();
 
@@ -83,6 +85,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "",
         5000,
+        null,
       );
       await client.getContainerConfig();
 
@@ -103,6 +106,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const config = await client.getContainerConfig();
 
@@ -121,6 +125,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_bad",
         5000,
+        null,
       );
 
       await expect(client.getContainerConfig()).rejects.toThrow(
@@ -144,6 +149,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       await expect(client.getContainerConfig()).rejects.toThrow(
@@ -163,6 +169,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       const err = await client
@@ -181,6 +188,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       await expect(client.getContainerConfig()).rejects.toThrow(OneCLIError);
@@ -196,6 +204,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       const err = await client
@@ -217,6 +226,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, {
@@ -248,6 +258,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, {
@@ -271,6 +282,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, { addHostMapping: false });
@@ -294,6 +306,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, {
@@ -314,6 +327,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const result = await client.applyContainerConfig([], {
         combineCaBundle: false,
@@ -332,6 +346,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       const result = await client.applyContainerConfig(args);
@@ -352,6 +367,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_invalid",
         5000,
+        null,
       );
 
       await expect(client.applyContainerConfig([])).rejects.toThrow(
@@ -376,6 +392,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
 
@@ -397,6 +414,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const result = await client.applyContainerConfig([]);
 
@@ -415,6 +433,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args = ["run", "-i", "--rm"];
       const argsBefore = [...args];
@@ -434,6 +453,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args = ["run", "-i", "--rm", "--name", "my-agent"];
       const originalLength = args.length;
@@ -463,6 +483,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, {
@@ -486,6 +507,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, {
@@ -513,6 +535,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, { combineCaBundle: false });
@@ -541,6 +564,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, { combineCaBundle: false });
@@ -567,6 +591,7 @@ describe("ContainerClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const args: string[] = [];
       await client.applyContainerConfig(args, {

@@ -231,6 +231,25 @@ for (const agent of agents) {
 
 **Returns** `Array<{ id, name, identifier, isDefault, createdAt }>`
 
+#### `onecli.listAgentsWithGrants(options?)`
+
+`listAgents` plus a per-agent summary of what's granted (which apps and
+secrets, not the full tool lists) in one round-trip.
+
+```typescript
+const agents = await onecli.listAgentsWithGrants();
+
+for (const agent of agents) {
+  console.log(agent.identifier, agent.grantsSummary.total);
+  for (const entry of agent.grantsSummary.entries) {
+    // entry.kind: "app" (a connection) | "secret" | "llm"
+    console.log(entry.kind === "app" ? entry.provider : entry.name);
+  }
+}
+```
+
+**Returns** `AgentWithGrantsSummary[]`
+
 #### `onecli.getEffectiveCredentials(agentId, options?)`
 
 Which credentials the agent can actually use, and what each one can do under the
@@ -285,6 +304,95 @@ console.log(result.created); // true if newly created, false if already existed
 Idempotent even at the agent cap: if the project is at its plan's agent limit but the target identifier already exists, the call still resolves with `created: false` instead of throwing a quota error.
 
 **Returns** `{ name, identifier, created }`
+
+---
+
+### Agent grants
+
+Which credentials an agent may use. An agent starts with **no grants** — the
+gateway injects nothing for it until a connection or secret is attached. Grant
+writes take effect immediately; there is no draft/publish step.
+
+Grants are the writable **intent**. The read-only reflections
+(`getEffectiveCredentials`, `getEffectiveAppPermissions`,
+`getConnectionAgentAccess`) show the **effect** — what requests actually get
+through once organization policy is applied on top. A tool a grant allows can
+still be blocked (or forced to approval) by an org rule, so the reflections are
+the view to trust when debugging a blocked request.
+
+#### `onecli.getAgentGrants(agentId, options?)`
+
+Everything granted to one agent.
+
+```typescript
+const grants = await onecli.getAgentGrants("agent-id");
+
+for (const c of grants.connections) {
+  // c.access: "full" (every tool) or "custom" (the allow/ask lists below)
+  console.log(c.provider, c.label, c.access, c.allow, c.ask);
+}
+for (const s of grants.secrets) {
+  console.log(s.name, s.type, s.scope);
+}
+```
+
+**Returns** `AgentGrants` — `{ agentId, mode, connections, secrets }`.
+
+#### `onecli.setConnectionGrant(agentId, connectionId, input, options?)`
+
+Attach an app connection to an agent, or change what the agent may do with it.
+
+```typescript
+// Full access — every tool the app supports
+await onecli.setConnectionGrant("agent-id", "connection-id", {
+  access: "full",
+});
+
+// Custom — name the tools. `allow` runs freely; `ask` pauses for human approval.
+await onecli.setConnectionGrant("agent-id", "connection-id", {
+  access: "custom",
+  allow: ["search_messages", "get_message"],
+  ask: ["send_email"],
+});
+```
+
+Two validation laws on custom grants (both a 422): the two lists together must
+name at least one tool — to take everything away, detach instead — and a tool
+can't be in both lists. Tool ids come from `listAppPermissionDefinitions()`.
+The `ask` list requires a plan with manual approvals (403 otherwise).
+
+**Returns** the agent's updated `AgentGrants`.
+
+#### `onecli.removeConnectionGrant(agentId, connectionId, options?)`
+
+Detach a connection from an agent. The gateway stops serving it to that agent
+immediately.
+
+**Returns** nothing (the server responds `204`).
+
+#### `onecli.attachSecret(agentId, secretId, options?)`
+
+Attach a secret (an API key or LLM key) to an agent. Secrets are
+all-or-nothing — there are no per-tool lists.
+
+**Returns** the agent's updated `AgentGrants`.
+
+#### `onecli.detachSecret(agentId, secretId, options?)`
+
+Detach a secret from an agent. **Returns** nothing (`204`).
+
+#### `onecli.getConnectionGrants(connectionId, options?)`
+
+The reverse view: which agents hold a grant for one connection.
+
+```typescript
+const { agents } = await onecli.getConnectionGrants("connection-id");
+for (const a of agents) {
+  console.log(a.agentId, a.access, a.allow, a.ask);
+}
+```
+
+**Returns** `ConnectionGrants` — `{ connectionId, agents }`.
 
 ---
 
@@ -419,6 +527,62 @@ try {
 
 ---
 
+### Gateway errors & multiple accounts
+
+Agent traffic doesn't go through this SDK — it rides the gateway proxy
+transparently. When the gateway blocks or can't route a proxied request, the
+response body is a typed JSON error (distinct from the management API's
+`{ error: { message, type } }` envelope). The SDK ships those body types plus a
+narrowing helper, so agent-side code can react without guessing:
+
+```typescript
+import {
+  parseGatewayError,
+  CONNECTION_ID_HEADER,
+} from "@onecli-sh/sdk";
+
+const send = async (headers: Record<string, string> = {}) =>
+  fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages", { headers });
+
+let res = await send();
+if (!res.ok) {
+  const err = parseGatewayError(await res.json().catch(() => null));
+
+  if (
+    err?.error === "multiple_connections" ||
+    err?.error === "multiple_providers"
+  ) {
+    // Two accounts could serve this request (e.g. two Gmail connections).
+    // Retry the identical request naming one of them:
+    const choice = err.connections[0];
+    res = await send({ [CONNECTION_ID_HEADER]: choice.id });
+  } else if (err) {
+    // access_restricted, blocked_by_policy, credential_not_found, ... —
+    // every arm carries a remediation URL or the blocking rule's name.
+    console.error(err.error, err.message);
+  }
+}
+```
+
+All of these responses carry `x-should-retry: false`: retrying unchanged will
+not succeed — the fix is the named remediation (add the header, grant the
+connection to the agent, attach the credential). Successfully forwarded
+responses advertise the available accounts in the `x-onecli-connections`
+response header (a JSON array of `GatewayConnectionChoice`), so an agent can
+learn the ids before ever hitting a 409.
+
+| Body (`error`) | Status | Meaning |
+| -------------- | ------ | ------- |
+| `multiple_connections` | 409 | Several accounts of the same app match — retry with `x-onecli-connection-id` |
+| `multiple_providers` | 409 | Accounts of different apps match — same retry protocol |
+| `connection_not_found` | 404 | The `x-onecli-connection-id` you sent names no available connection — re-pick |
+| `access_restricted` | upstream 401/403 | A credential exists, but this agent has no grant for it (`manage_url` opens the fix) |
+| `blocked_by_policy` | 403 | A policy rule blocked the request (`rule_name` says which) |
+| `blocked_by_default_policy` | 403 | Nothing allowed the request (deny-by-default) |
+| `credential_not_found` | upstream 401/403 | No credential exists for this host at all (`secret_url` is a create link) |
+
+---
+
 ### `onecli.org` — organization-level resources
 
 Connections and rules shared by **every project** in the organization. Requests carry no `X-Project-Id`; authenticate with an organization API key (`oc_org_...`), and note every org operation requires the admin or owner role. Requires OneCLI Cloud or a self-hosted Enterprise instance (a 404 from servers without the org surface is mapped to a descriptive `OneCLIError`). `getAuthorizeUrl` is for server-side runtimes only (browser fetch hides redirect headers).
@@ -472,13 +636,16 @@ const handle = onecli.org.configureManualApproval(
 ```
 
 Policy rules carry structured `targets` (app / connection / secret /
-network) and `identities` (org rules take `agentGroup`/`user`/`group`).
-Rule responses use `PolicyRuleTarget` (arrays always present, unset scalars
-`null`); inputs use `PolicyRuleTargetInput` (omit unused fields — the API
-rejects `null`s on write). `updatePolicyRule` requires at least one field
-(an empty input is rejected with 422). Legacy rule listings still mix
-custom rows (with `hostPattern`/etc.) and read-only app-permission rows
-identified by `metadata.provider` + `metadata.toolId`.
+network) and `identities` (org rules take `user`/`group`; `agent`
+identities exist at project scope only). Rule responses use
+`PolicyRuleTarget` (arrays always present, unset scalars `null`); inputs
+use `PolicyRuleTargetInput` (omit unused fields — the API rejects `null`s
+on write). `updatePolicyRule` requires at least one field (an empty input
+is rejected with 422).
+
+Org rules are the organization-wide **ceiling**: they cap what any project
+grant can allow. Per-agent access within a project is managed with
+[agent grants](#agent-grants), not rules.
 
 | Method | Endpoint | Returns |
 |--------|----------|---------|
@@ -503,40 +670,104 @@ identified by `metadata.provider` + `metadata.toolId`.
 
 ### Types
 
-All types are exported for use in your own code:
+Every request/response shape is exported. The full surface, by area:
 
 ```typescript
+// Client + container configuration
 import type {
   OneCLIOptions,
   RequestOptions,
   ContainerConfig,
+  CredentialStub,
   GetContainerConfigOptions,
   ApplyContainerConfigOptions,
+} from "@onecli-sh/sdk";
+
+// Agents + grants
+import type {
+  Agent,
   CreateAgentInput,
   CreateAgentResponse,
   EnsureAgentResponse,
+  AgentGrants,
+  AgentGrantConnection,
+  AgentGrantSecret,
+  ConnectionGrantInput,
+  ConnectionGrants,
+  AgentGrantsSummary,
+  GrantsSummaryEntry,
+  AgentWithGrantsSummary,
+} from "@onecli-sh/sdk";
+
+// Read-only policy reflections (effective access)
+import type {
+  EffectiveCredentials,
+  EffectiveCredential,
+  CredentialAccessStatus,
+  CredentialProvenance,
+  ConnectionAgentAccess,
+  ConnectionAgent,
+  AgentAccessStatus,
+  AgentCredentialStatus,
+  AppPermissionDefinition,
+  EffectiveAppPermissions,
+  EffectiveToolGroup,
+  EffectiveTool,
+  EffectiveToolVerdict,
+  EffectiveProvenance,
+} from "@onecli-sh/sdk";
+
+// Gateway proxied-error protocol (see "Gateway errors & multiple accounts")
+import {
+  parseGatewayError,
+  CONNECTION_ID_HEADER,
+  CONNECTIONS_HEADER,
+} from "@onecli-sh/sdk";
+import type {
+  GatewayError,
+  GatewayConnectionChoice,
+  MultipleConnectionsError,
+  MultipleProvidersError,
+  ConnectionNotFoundError,
+  AccessRestrictedError,
+  BlockedByPolicyError,
+  BlockedByDefaultPolicyError,
+  CredentialNotFoundError,
+} from "@onecli-sh/sdk";
+
+// Manual approval
+import type {
   ApprovalRequest,
+  ApprovalSummary,
+  ApprovalDetail,
   ManualApprovalCallback,
   ManualApprovalHandle,
   OrgApprovalRequest,
   OrgManualApprovalCallback,
   OrgManualApprovalOptions,
+} from "@onecli-sh/sdk";
+
+// Project provisioning
+import type {
   ProvisionProjectInput,
   ProvisionProjectResponse,
+} from "@onecli-sh/sdk";
+
+// Organization surface (connections + org policy rules)
+import type {
   ConnectOrgAppInput,
   GetOrgAuthorizeUrlOptions,
   OrgConnection,
-  OrgRule,
-  OrgRuleCondition,
-  CreateOrgRuleInput,
-  UpdateOrgRuleInput,
   OrgPolicyRule,
+  OrgRuleCondition,
+  OrgRuleMethod,
+  OrgRuleRateLimitWindow,
   PolicyRuleAction,
   PolicyRuleStatus,
-  PolicyRuleTarget,
-  PolicyRuleTargetInput,
   PolicyRuleIdentity,
   OrgPolicyRuleIdentityInput,
+  PolicyRuleTarget,
+  PolicyRuleTargetInput,
   PolicyRuleConditionsInput,
   CreateOrgPolicyRuleInput,
   UpdateOrgPolicyRuleInput,
