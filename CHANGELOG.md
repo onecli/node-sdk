@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.1.0](https://github.com/onecli/node-sdk/compare/v3.0.0...v3.1.0) (2026-07-29)
+
+
+### Features
+
+* agent grants, the gateway error protocol, and grant summaries ([#56](https://github.com/onecli/node-sdk/issues/56)) ([17c511e](https://github.com/onecli/node-sdk/commit/17c511efcf1515b218e17b0fb3a56837d5dfed33))
+
 ## [3.0.0](https://github.com/onecli/node-sdk/compare/v2.8.0...v3.0.0) (2026-07-25)
 
 
