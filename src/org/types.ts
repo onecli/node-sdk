@@ -30,12 +30,6 @@ export interface OrgConnection {
   connectedAt: string;
 }
 
-export type OrgRuleAction =
-  | "block"
-  | "rate_limit"
-  | "manual_approval"
-  | "allow";
-
 export type OrgRuleMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 export type OrgRuleRateLimitWindow = "minute" | "hour" | "day";
@@ -49,62 +43,6 @@ export interface OrgRuleCondition {
   key?: string;
 }
 
-/**
- * An organization-scoped policy rule, applied to every agent in the org.
- *
- * The endpoint fields (`hostPattern`/`pathPattern`/`method`) are present on
- * custom (user-authored) rules only. App-permission rules — rows whose
- * `metadata.source` is `"app_permission"` — omit them; those rules are
- * identified by `metadata.provider` + `metadata.toolId`. On cloud
- * deployments app permissions are managed as policy-engine rules (see
- * `createPolicyRule`); the legacy permissions endpoint is retired there.
- */
-export interface OrgRule {
-  id: string;
-  name: string;
-  hostPattern?: string;
-  pathPattern?: string | null;
-  method?: OrgRuleMethod | null;
-  action: OrgRuleAction;
-  enabled: boolean;
-  rateLimit: number | null;
-  rateLimitWindow: OrgRuleRateLimitWindow | null;
-  scope?: string;
-  conditions?: OrgRuleCondition[];
-  metadata?: unknown;
-  createdAt: string;
-}
-
-export interface CreateOrgRuleInput {
-  name: string;
-  hostPattern: string;
-  action: OrgRuleAction;
-  enabled: boolean;
-  pathPattern?: string;
-  method?: OrgRuleMethod;
-  /** Required when `action` is "rate_limit". */
-  rateLimit?: number;
-  /** Required when `action` is "rate_limit". */
-  rateLimitWindow?: OrgRuleRateLimitWindow;
-  conditions?: OrgRuleCondition[];
-}
-
-/**
- * Partial update for an organization rule. Nullable fields accept an explicit
- * `null` to clear the stored value (omitting a field leaves it unchanged).
- */
-export interface UpdateOrgRuleInput {
-  name?: string;
-  hostPattern?: string;
-  action?: OrgRuleAction;
-  enabled?: boolean;
-  pathPattern?: string | null;
-  method?: OrgRuleMethod | null;
-  rateLimit?: number | null;
-  rateLimitWindow?: OrgRuleRateLimitWindow | null;
-  conditions?: OrgRuleCondition[] | null;
-}
-
 /** A policy-engine rule action. */
 export type PolicyRuleAction = "allow" | "block";
 
@@ -113,11 +51,11 @@ export type PolicyRuleStatus = "draft" | "published";
 
 /**
  * A principal a policy rule applies to, as the API returns it. Org rules
- * carry `agentGroup`, `user`, or `group` identities (`agent` exists at
- * project scope only); an empty identity list means "everyone".
+ * carry `user` or `group` identities (`agent` exists at project scope
+ * only); an empty identity list means "everyone".
  */
 export interface PolicyRuleIdentity {
-  type: "agent" | "agentGroup" | "user" | "group";
+  type: "agent" | "user" | "group";
   id: string;
 }
 

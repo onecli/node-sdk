@@ -34,6 +34,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000///",
         "oc_test",
         5000,
+        null,
       );
       client.createAgent({ name: "Test", identifier: "test" });
 
@@ -54,6 +55,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_mykey",
         5000,
+        null,
       );
       await client.createAgent({ name: "My Agent", identifier: "my-agent" });
 
@@ -75,7 +77,7 @@ describe("AgentsClient", () => {
         new Response(JSON.stringify(MOCK_AGENT), { status: 201 }),
       );
 
-      const client = new AgentsClient("http://localhost:3000", "", 5000);
+      const client = new AgentsClient("http://localhost:3000", "", 5000, null);
       await client.createAgent({ name: "Test", identifier: "test" });
 
       expect(fetchSpy).toHaveBeenCalledWith(
@@ -95,6 +97,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const agent = await client.createAgent({
         name: "My Agent",
@@ -116,6 +119,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_bad",
         5000,
+        null,
       );
 
       await expect(
@@ -142,6 +146,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       const err = await client
@@ -160,6 +165,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       await expect(
@@ -179,6 +185,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       const err = await client
@@ -199,6 +206,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_mykey",
         5000,
+        null,
       );
       await client.listAgents();
 
@@ -223,6 +231,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const agents = await client.listAgents();
 
@@ -237,7 +246,7 @@ describe("AgentsClient", () => {
         }),
       );
 
-      const client = new AgentsClient("http://localhost:3000", "oc_bad", 5000);
+      const client = new AgentsClient("http://localhost:3000", "oc_bad", 5000, null);
 
       const err = await client.listAgents().catch((e: unknown) => e);
       expect(err).toBeInstanceOf(OneCLIRequestError);
@@ -253,6 +262,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       await expect(client.listAgents()).rejects.toThrow(OneCLIError);
@@ -269,6 +279,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const result = await client.ensureAgent({
         name: "My Agent",
@@ -294,6 +305,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const result = await client.ensureAgent({
         name: "My Agent",
@@ -326,6 +338,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
       const result = await client.ensureAgent({
         name: "My Agent",
@@ -361,6 +374,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       const err = await client
@@ -387,6 +401,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       const err = await client
@@ -409,6 +424,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_bad",
         5000,
+        null,
       );
 
       await expect(
@@ -425,6 +441,7 @@ describe("AgentsClient", () => {
         "http://localhost:3000",
         "oc_test",
         5000,
+        null,
       );
 
       await expect(
