@@ -266,7 +266,7 @@ describe("ContainerClient", () => {
         addHostMapping: false,
       });
 
-      const expectedHostPath = join(tmpdir(), "onecli-proxy-ca.pem");
+      const expectedHostPath = join(process.env.XDG_RUNTIME_DIR ?? tmpdir(), "onecli-proxy-ca.pem");
       const mountArg = args.find((a) => a.includes(":") && a.includes("onecli-proxy-ca.pem") && a.endsWith(":ro"));
       expect(mountArg).toBe(
         `${expectedHostPath}:${MOCK_CONFIG.caCertificateContainerPath}:ro`,

@@ -16,6 +16,18 @@ vi.mock("os", async (importOriginal) => {
   return { ...original, tmpdir: () => isolatedTmp };
 });
 
+// The per-user-isolation fix prefers XDG_RUNTIME_DIR over tmpdir(). Point it at
+// the isolated dir so cert writes are deterministic on hosts where it's set.
+let savedXdgRuntimeDir: string | undefined;
+beforeAll(() => {
+  savedXdgRuntimeDir = process.env.XDG_RUNTIME_DIR;
+  process.env.XDG_RUNTIME_DIR = isolatedTmp;
+});
+afterAll(() => {
+  if (savedXdgRuntimeDir === undefined) delete process.env.XDG_RUNTIME_DIR;
+  else process.env.XDG_RUNTIME_DIR = savedXdgRuntimeDir;
+});
+
 describe("writeCaCertificate", () => {
   it("writes PEM to tmpdir and returns path", () => {
     const path = writeCaCertificate(PROXY_CA);
