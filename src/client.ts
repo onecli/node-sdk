@@ -39,7 +39,7 @@ const DEFAULT_TIMEOUT = 5000;
 export class OneCLI {
   private containerClient: ContainerClient;
   private agentsClient: AgentsClient;
-  private approvalClient: ApprovalClient;
+  private createApprovalClient: () => ApprovalClient;
   private provisionClient: ProvisionClient;
 
   /**
@@ -66,12 +66,10 @@ export class OneCLI {
       projectId,
     );
     this.agentsClient = new AgentsClient(url, apiKey, timeout, projectId);
-    this.approvalClient = new ApprovalClient(
-      url,
-      apiKey,
-      gatewayUrl,
-      projectId,
-    );
+    // A fresh client per configureManualApproval call, so a stopped handle's
+    // loop can't be revived by the next call and keep using its callback.
+    this.createApprovalClient = () =>
+      new ApprovalClient(url, apiKey, gatewayUrl, projectId);
     this.provisionClient = new ProvisionClient(
       url,
       apiKey,
@@ -292,9 +290,10 @@ export class OneCLI {
     callback: ManualApprovalCallback,
     options?: RequestOptions,
   ): ManualApprovalHandle => {
-    this.approvalClient.start(callback, options).catch(() => {
+    const client = this.createApprovalClient();
+    client.start(callback, options).catch(() => {
       // Errors handled internally with backoff
     });
-    return { stop: () => this.approvalClient.stop() };
+    return { stop: () => client.stop() };
   };
 }
