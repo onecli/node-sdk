@@ -89,10 +89,12 @@ export class ApprovalClient {
   ): Promise<void> {
     this.running = true;
     const projectId = options?.projectId ?? null;
-    const gatewayUrl = await this.resolveGatewayUrl(projectId);
 
     while (this.running) {
       try {
+        // Resolve inside the loop so a failed resolution backs off and
+        // retries like a failed poll. It caches on success.
+        const gatewayUrl = await this.resolveGatewayUrl(projectId);
         const poll = await this.poll(gatewayUrl, projectId);
 
         for (const request of poll.requests) {
